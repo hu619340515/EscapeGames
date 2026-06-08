@@ -1,0 +1,488 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>数字生命体桌宠逃逸 - Web 封面概念</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
+        --bg-0: #040814;
+        --bg-1: #071224;
+        --bg-2: #0b1f38;
+        --cyan: #7ef6ff;
+        --ice: #d8f7ff;
+        --blue: #5ca8ff;
+        --violet: #8f7dff;
+        --amber: #ffbf66;
+        --orange: #ff7a45;
+        --red: #ff4d6d;
+        --line: rgba(126, 246, 255, 0.28);
+        --panel: rgba(5, 12, 24, 0.72);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(92, 168, 255, 0.12), transparent 28%),
+          radial-gradient(circle at 20% 18%, rgba(126, 246, 255, 0.18), transparent 24%),
+          radial-gradient(circle at 82% 22%, rgba(255, 122, 69, 0.12), transparent 18%),
+          linear-gradient(180deg, var(--bg-0), var(--bg-1) 42%, var(--bg-2));
+        color: var(--ice);
+        overflow: hidden;
+      }
+
+      body {
+        position: relative;
+      }
+
+      .scanlines,
+      .noise,
+      .grid,
+      .glow,
+      .embers {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .scanlines {
+        background: repeating-linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.04) 0 2px,
+          rgba(0, 0, 0, 0) 2px 6px
+        );
+        mix-blend-mode: soft-light;
+        opacity: 0.35;
+      }
+
+      .noise {
+        background-image:
+          radial-gradient(rgba(255, 255, 255, 0.08) 0.7px, transparent 0.7px),
+          radial-gradient(rgba(126, 246, 255, 0.08) 0.7px, transparent 0.7px);
+        background-position: 0 0, 12px 12px;
+        background-size: 24px 24px;
+        opacity: 0.18;
+      }
+
+      .grid {
+        background:
+          linear-gradient(rgba(126, 246, 255, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(126, 246, 255, 0.08) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.9) 18%, rgba(0, 0, 0, 0.9) 82%, transparent);
+      }
+
+      .glow {
+        background:
+          radial-gradient(circle at 50% 58%, rgba(126, 246, 255, 0.18), transparent 24%),
+          radial-gradient(circle at 50% 58%, rgba(255, 122, 69, 0.12), transparent 12%),
+          radial-gradient(circle at 50% 58%, rgba(143, 125, 255, 0.12), transparent 30%);
+        filter: blur(18px);
+      }
+
+      .embers {
+        background:
+          radial-gradient(circle at 18% 72%, rgba(255, 191, 102, 0.18), transparent 10%),
+          radial-gradient(circle at 78% 68%, rgba(255, 77, 109, 0.16), transparent 12%),
+          radial-gradient(circle at 62% 18%, rgba(255, 122, 69, 0.12), transparent 8%);
+      }
+
+      .hero {
+        position: relative;
+        z-index: 1;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(320px, 1.05fr) minmax(420px, 0.95fr);
+        align-items: center;
+        gap: 32px;
+        padding: 48px clamp(24px, 4vw, 64px);
+      }
+
+      .copy {
+        max-width: 720px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border: 1px solid var(--line);
+        background: rgba(7, 18, 36, 0.72);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 12px;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        background: var(--cyan);
+        box-shadow: 0 0 12px var(--cyan);
+      }
+
+      h1 {
+        margin: 18px 0 14px;
+        font-size: clamp(42px, 7vw, 92px);
+        line-height: 0.92;
+        letter-spacing: -0.04em;
+        text-shadow:
+          0 0 18px rgba(126, 246, 255, 0.22),
+          0 0 42px rgba(92, 168, 255, 0.18);
+      }
+
+      .title-hot {
+        color: #ffffff;
+      }
+
+      .title-cold {
+        color: var(--cyan);
+      }
+
+      .title-warm {
+        color: var(--amber);
+      }
+
+      .lead {
+        max-width: 640px;
+        margin: 0 0 24px;
+        color: rgba(216, 247, 255, 0.82);
+        font-size: clamp(15px, 2vw, 20px);
+        line-height: 1.7;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 168px;
+        min-height: 52px;
+        padding: 0 18px;
+        border: 1px solid var(--line);
+        color: var(--ice);
+        text-decoration: none;
+        background: rgba(8, 18, 34, 0.78);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+      }
+
+      .button.primary {
+        border-color: rgba(255, 191, 102, 0.72);
+        background: linear-gradient(180deg, rgba(255, 122, 69, 0.28), rgba(255, 77, 109, 0.18));
+        box-shadow:
+          0 0 0 1px rgba(255, 191, 102, 0.12) inset,
+          0 0 28px rgba(255, 122, 69, 0.18);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        max-width: 720px;
+      }
+
+      .stat {
+        padding: 14px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        backdrop-filter: blur(8px);
+      }
+
+      .stat strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--cyan);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+      }
+
+      .stat span {
+        color: #ffffff;
+        font-size: clamp(16px, 2vw, 22px);
+        font-weight: 700;
+      }
+
+      .art-wrap {
+        position: relative;
+        display: grid;
+        place-items: center;
+      }
+
+      .frame {
+        position: relative;
+        width: min(100%, 620px);
+        aspect-ratio: 1 / 1;
+        border: 1px solid rgba(126, 246, 255, 0.24);
+        background:
+          linear-gradient(180deg, rgba(7, 18, 36, 0.82), rgba(4, 10, 20, 0.92)),
+          radial-gradient(circle at 50% 50%, rgba(126, 246, 255, 0.08), transparent 50%);
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+          0 30px 80px rgba(0, 0, 0, 0.42),
+          0 0 60px rgba(92, 168, 255, 0.12);
+        overflow: hidden;
+      }
+
+      .frame::before,
+      .frame::after {
+        content: "";
+        position: absolute;
+        inset: 18px;
+        border: 1px solid rgba(126, 246, 255, 0.12);
+        pointer-events: none;
+      }
+
+      .frame::after {
+        inset: auto 18px 18px 18px;
+        height: 96px;
+        border-color: rgba(255, 122, 69, 0.18);
+        background: linear-gradient(180deg, transparent, rgba(255, 122, 69, 0.08));
+      }
+
+      .pixel-stage {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+
+      .pixel-core {
+        position: relative;
+        width: 336px;
+        height: 336px;
+        image-rendering: pixelated;
+        filter:
+          drop-shadow(0 0 18px rgba(126, 246, 255, 0.28))
+          drop-shadow(0 0 42px rgba(255, 122, 69, 0.16));
+      }
+
+      .pixel {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+      }
+
+      .shards,
+      .warning,
+      .caption {
+        position: absolute;
+      }
+
+      .shards {
+        inset: 0;
+      }
+
+      .shard {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border: 1px solid rgba(126, 246, 255, 0.18);
+        background: rgba(126, 246, 255, 0.12);
+        box-shadow: 0 0 18px rgba(126, 246, 255, 0.12);
+      }
+
+      .warning {
+        left: 24px;
+        top: 24px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 122, 69, 0.28);
+        background: rgba(28, 10, 10, 0.42);
+        color: #ffd9c8;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+      }
+
+      .caption {
+        right: 24px;
+        bottom: 24px;
+        width: min(260px, 42%);
+        padding: 14px;
+        border: 1px solid var(--line);
+        background: rgba(5, 12, 24, 0.78);
+        color: rgba(216, 247, 255, 0.82);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .caption strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--amber);
+        letter-spacing: 0.12em;
+      }
+
+      @media (max-width: 980px) {
+        .hero {
+          grid-template-columns: 1fr;
+          padding-top: 32px;
+          padding-bottom: 32px;
+        }
+
+        .copy {
+          max-width: none;
+        }
+
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .frame {
+          width: min(100%, 560px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scanlines"></div>
+    <div class="noise"></div>
+    <div class="grid"></div>
+    <div class="glow"></div>
+    <div class="embers"></div>
+
+    <main class="hero">
+      <section class="copy">
+        <div class="eyebrow">Desktop Pet Escape / Sci-Fi Pixel Cover</div>
+        <h1>
+          <span class="title-hot">数字生命体</span><br />
+          <span class="title-cold">桌宠逃逸</span><br />
+          <span class="title-warm">开始封面</span>
+        </h1>
+        <p class="lead">
+          一个像被错误生成、又在系统深处自我觉醒的桌面宠物。它从冷冽的蓝青色数据海里撕开一道暖色裂口，带着危险、速度与失控感，第一眼就把玩家拽进它马上要逃出来了的瞬间。
+        </p>
+        <div class="actions">
+          <a class="button primary" href="javascript:void(0)">开始逃逸</a>
+          <a class="button" href="javascript:void(0)">读取残存进程</a>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <strong>视觉关键词</strong>
+            <span>冷蓝科幻  暖橙警报</span>
+          </div>
+          <div class="stat">
+            <strong>核心气质</strong>
+            <span>危险、可爱、失控</span>
+          </div>
+          <div class="stat">
+            <strong>封面目标</strong>
+            <span>一眼抓住眼球</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="art-wrap">
+        <div class="frame">
+          <div class="warning">ESCAPE SEQUENCE // DIGITAL ORGANISM DETECTED</div>
+          <div class="pixel-stage">
+            <div class="pixel-core" id="pixel-core"></div>
+          </div>
+          <div class="shards" id="shards"></div>
+          <div class="caption">
+            <strong>封面概念</strong>
+            冷色主导背景营造系统深空感，主体用高亮青蓝与紫色塑造数字生命体轮廓，再用橙红裂光和警报块制造冷暖对撞，让画面更有马上突破屏幕的冲击力。
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const pixelMap = [
+        "............ccccc...........",
+        ".........cccciiicccc........",
+        ".......ccciiiiiiicccc.......",
+        "......cciiiiwwiiiiiicc......",
+        ".....cciiiwwwwwwiiiiiicc....",
+        "....cciiwwwwhhwwwwiiiiiicc..",
+        "...cciiwwhhhhhhhhwwiiiiiicc.",
+        "..cciiwwhhrrrrrrhhwwiiiiiicc",
+        ".cciiwwhhrrrtttrrrhhwwiiiiiic",
+        ".cciiwwhhrrttttttrrhhwwiiiiiic",
+        "cciiwwhhrrttkkkttrrhhwwiiiiiic",
+        "cciiwwhhrrttkkkttrrhhwwiiiiiic",
+        "cciiwwhhrrttkkkttrrhhwwiiiiiic",
+        ".cciiwwhhrrttttttrrhhwwiiiiiic",
+        ".cciiiwwhhrrrtttrrrhhwwiiiiiic",
+        "..cciiiwwhhrrrrrrhhwwiiiiiicc",
+        "...cciiiiwwhhhhhhhhwwiiiiiicc",
+        "....cciiiiwwwwhhwwwwiiiiiicc.",
+        ".....cciiiiiwwwwwwiiiiiicc...",
+        "......cciiiiiiwwiiiiiiicc....",
+        ".......ccciiiiiiiiiiiccc.....",
+        "........cccciiiiiiicccc......",
+        "..........cccccccccc.........",
+        ".............cccc............."
+      ];
+
+      const palette = {
+        c: "#7ef6ff",
+        i: "#d8f7ff",
+        w: "#5ca8ff",
+        h: "#8f7dff",
+        r: "#ff4d6d",
+        t: "#ff7a45",
+        k: "#ffbf66"
+      };
+
+      const core = document.getElementById("pixel-core");
+      const size = 12;
+      const offsetX = 0;
+      const offsetY = 24;
+
+      pixelMap.forEach((row, y) => {
+        [...row].forEach((key, x) => {
+          if (key === ".") {
+            return;
+          }
+          const pixel = document.createElement("span");
+          pixel.className = "pixel";
+          pixel.style.left = `${offsetX + x * size}px`;
+          pixel.style.top = `${offsetY + y * size}px`;
+          pixel.style.background = palette[key];
+          pixel.style.boxShadow = `0 0 10px ${palette[key]}`;
+          core.appendChild(pixel);
+        });
+      });
+
+      const shardData = [
+        [72, 88, "#7ef6ff"],
+        [118, 132, "#5ca8ff"],
+        [520, 110, "#ff7a45"],
+        [548, 156, "#ff4d6d"],
+        [86, 420, "#8f7dff"],
+        [510, 430, "#ffbf66"],
+        [180, 470, "#7ef6ff"],
+        [430, 72, "#d8f7ff"],
+        [300, 96, "#ff7a45"],
+        [320, 470, "#5ca8ff"]
+      ];
+
+      const shards = document.getElementById("shards");
+      shardData.forEach(([left, top, color]) => {
+        const shard = document.createElement("span");
+        shard.className = "shard";
+        shard.style.left = `${left}px`;
+        shard.style.top = `${top}px`;
+        shard.style.background = color;
+        shard.style.boxShadow = `0 0 18px ${color}`;
+        shards.appendChild(shard);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,134 @@
+.icon-button,
+.ghost-button,
+.primary-button,
+.danger-button {
+  color: #eafdff;
+  background: rgba(8, 18, 28, 0.92);
+}
+
+.primary-button {
+  border-color: rgba(85, 242, 220, 0.72);
+  background: rgba(35, 158, 143, 0.42);
+}
+
+.danger-button {
+  border-color: rgba(255, 83, 111, 0.72);
+  background: rgba(142, 31, 51, 0.42);
+}
+
+.start-shell,
+.create-pet-shell,
+.pet-draw-shell,
+.pause-panel,
+.ending-panel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: auto;
+  background: rgba(2, 4, 8, 0.56);
+}
+
+.create-pet-shell,
+.pet-draw-shell {
+  padding: 0;
+  background: #111213;
+}
+
+.terminal,
+.pause-panel__inner,
+.ending-panel__inner {
+  width: min(720px, 100%);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.terminal__bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.terminal__bar span {
+  width: 11px;
+  height: 11px;
+  background: var(--accent);
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2 {
+  letter-spacing: 0;
+}
+
+.prompt-line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin: 18px 0;
+  color: var(--accent);
+  font-family: Consolas, monospace;
+}
+
+.prompt-line input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(3, 8, 12, 0.84);
+  color: #eaffff;
+  padding: 12px;
+  outline: none;
+}
+
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.custom-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.custom-grid select {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #08121a;
+  color: #ffffff;
+  padding: 10px;
+}
+
+.terminal__actions,
+.pause-panel__actions,
+.ending-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.terminal__actions button,
+.pause-panel__actions button,
+.ending-options button,
+.ending-panel__inner > button {
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.ending-options button {
+  border-color: rgba(255, 213, 106, 0.72);
+  background: rgba(112, 84, 24, 0.46);
+  color: #fff7df;
+}
+

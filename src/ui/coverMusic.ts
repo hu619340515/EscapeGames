@@ -1,5 +1,5 @@
 import coverMusicUrl from "../../背景音乐/首页/首页背景音.wav";
-import keyboardClickUrl from "../../背景音乐/首页/键盘点击.wav";
+import keyboardClickUrl from "../../背景音乐/首页/键盘点击2.wav";
 
 export interface CoverMusicController {
   setActive(active: boolean): void;
@@ -15,7 +15,7 @@ export function createCoverMusicController(): CoverMusicController {
   const keyboardClicks = Array.from({ length: 4 }, () => {
     const click = new Audio(keyboardClickUrl);
     click.preload = "auto";
-    click.volume = 0.14;
+    click.volume = 0.07;
     return click;
   });
   const keyboardClickMs = 420;

@@ -30,10 +30,15 @@
   background: rgba(2, 4, 8, 0.56);
 }
 
-.create-pet-shell,
-.pet-draw-shell {
+.create-pet-shell {
   padding: 0;
   background: #111213;
+}
+
+.pet-draw-shell {
+  z-index: 10;
+  padding: 0;
+  background: rgba(2, 4, 8, 0.18);
 }
 
 .terminal,

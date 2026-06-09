@@ -23,6 +23,7 @@ const defaultCustomization: PlayerCustomization = {
   body: "round",
   personality: "curious",
   startingSkill: "short-hop",
+  petSpecies: "cat",
 };
 
 export function createInitialGameState(): GameState {

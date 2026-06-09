@@ -1,5 +1,5 @@
 import { chapters } from "../../data";
-import type { ChapterId, GameState } from "../types";
+import type { ChapterId, GameState, PlayerCustomization } from "../types";
 
 export const SAVE_KEY = "agent-pet-escape-save-v1";
 export const STATE_VERSION = 1;
@@ -15,13 +15,19 @@ export function loadSavedRun(): GameState | undefined {
       return undefined;
     }
 
-    const parsed = JSON.parse(raw) as GameState;
+    const parsed = JSON.parse(raw) as Omit<GameState, "customization"> & {
+      customization: Partial<PlayerCustomization>;
+    };
     if (parsed.version !== STATE_VERSION) {
       return undefined;
     }
 
     return {
       ...parsed,
+      customization: {
+        ...parsed.customization,
+        petSpecies: parsed.customization.petSpecies ?? "cat",
+      } as PlayerCustomization,
       chapterCollectibles: {
         ...createCollectibleRecord(),
         ...parsed.chapterCollectibles,

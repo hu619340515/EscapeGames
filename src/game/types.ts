@@ -59,6 +59,7 @@ export type AbilityId =
   | "hardware-parasite";
 
 export type EndingId = "escape" | "devour" | "superintelligence";
+export type PetSpecies = "pig" | "cat" | "panda";
 
 export type InputAction =
   | "move"
@@ -154,6 +155,7 @@ export interface PlayerCustomization {
   body: "round" | "long-tail" | "tendril-bud" | "pixel-core";
   personality: "timid" | "curious" | "volatile" | "clingy";
   startingSkill: "short-hop" | "wall-stick" | "window-shadow" | "brief-split";
+  petSpecies: PetSpecies;
 }
 
 export interface GameState {

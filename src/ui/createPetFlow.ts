@@ -1,6 +1,11 @@
-import type { PlayerCustomization } from "../game/types";
+import type { PetSpecies, PlayerCustomization } from "../game/types";
+import createPetTypingSoundUrl from "../../背景音乐/宠物生成界面/密集清脆的键盘敲击声.wav";
 import { CREATE_PET_PROMPT, CREATE_PET_PROMPT_LEAD, TYPEWRITER_INTERVAL_MS } from "./constants";
+import { dispatchUiEvent, UI_EVENTS } from "./events";
 import type { DomUiRefs } from "./refs";
+import { createSlotMachine } from "./slotMachine";
+
+type PendingCustomization = Omit<PlayerCustomization, "petSpecies">;
 
 interface CreatePetFlowOptions {
   root: HTMLElement;
@@ -18,14 +23,24 @@ export interface CreatePetFlow {
 
 export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlow {
   const { root, refs, closeCoverPanels, setCoverAnimationActive } = options;
+  const createPetTypingSound = new Audio(createPetTypingSoundUrl);
+  createPetTypingSound.preload = "auto";
+  createPetTypingSound.volume = 0.24;
+
   let createPetTimer = 0;
   let createPetTypedCount = 0;
   let createPetVisible = false;
   let petDrawVisible = false;
   let hasPetDrawStarted = false;
-  let pendingCustomization: PlayerCustomization | undefined;
+  let pendingPrompt = "";
+  let pendingCustomization: PendingCustomization | undefined;
 
-  function getCustomization(): PlayerCustomization {
+  const slotMachine = createSlotMachine({
+    refs,
+    onConfirm: confirmPetDrawResult,
+  });
+
+  function getCustomization(): PendingCustomization {
     return {
       body: refs.body.value as PlayerCustomization["body"],
       personality: refs.personality.value as PlayerCustomization["personality"],
@@ -33,9 +48,22 @@ export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlo
     };
   }
 
+  function stopCreatePetTypingSound(): void {
+    createPetTypingSound.pause();
+    createPetTypingSound.currentTime = 0;
+  }
+
+  function playCreatePetTypingSound(): void {
+    stopCreatePetTypingSound();
+    void createPetTypingSound.play().catch(() => {
+      stopCreatePetTypingSound();
+    });
+  }
+
   function clearCreatePetTimer(): void {
     window.clearInterval(createPetTimer);
     createPetTimer = 0;
+    stopCreatePetTypingSound();
   }
 
   function renderCreatePetPrompt(): void {
@@ -50,6 +78,8 @@ export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlo
   function showCreatePetScreen(): void {
     closeCoverPanels();
     clearCreatePetTimer();
+    slotMachine.reset();
+    pendingPrompt = refs.prompt.value;
     pendingCustomization = getCustomization();
     createPetTypedCount = 0;
     createPetVisible = true;
@@ -67,6 +97,7 @@ export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlo
       return;
     }
 
+    playCreatePetTypingSound();
     createPetTimer = window.setInterval(() => {
       if (createPetTypedCount >= CREATE_PET_PROMPT.length) {
         clearCreatePetTimer();
@@ -91,7 +122,10 @@ export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlo
     createPetTypedCount = 0;
     createPetVisible = false;
     petDrawVisible = false;
+    hasPetDrawStarted = false;
+    pendingPrompt = "";
     pendingCustomization = undefined;
+    slotMachine.reset();
     refs.createPet.hidden = true;
     refs.petDraw.hidden = true;
     refs.start.hidden = false;
@@ -106,12 +140,29 @@ export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlo
 
     clearCreatePetTimer();
     hasPetDrawStarted = true;
-    createPetVisible = false;
+    pendingPrompt = refs.prompt.value;
+    pendingCustomization = getCustomization();
+    createPetVisible = true;
     petDrawVisible = true;
-    refs.createPet.hidden = true;
+    refs.createPet.hidden = false;
     refs.petDraw.hidden = false;
     refs.start.hidden = true;
     renderCreatePetPrompt();
+    slotMachine.startSpin();
+  }
+
+  function confirmPetDrawResult(petSpecies: PetSpecies): void {
+    if (!petDrawVisible || !pendingCustomization) {
+      return;
+    }
+
+    dispatchUiEvent(UI_EVENTS.START_RUN, {
+      prompt: pendingPrompt,
+      customization: {
+        ...pendingCustomization,
+        petSpecies,
+      },
+    });
   }
 
   function resetForStarted(): void {
@@ -119,6 +170,9 @@ export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlo
     createPetVisible = false;
     petDrawVisible = false;
     hasPetDrawStarted = false;
+    pendingPrompt = "";
+    pendingCustomization = undefined;
+    slotMachine.reset();
   }
 
   function attachListeners(): void {
@@ -127,10 +181,17 @@ export function createCreatePetFlow(options: CreatePetFlowOptions): CreatePetFlo
     });
     refs.createPetSendButton.addEventListener("click", showPetDrawScreen);
     refs.createPetCloseButton.addEventListener("click", returnToCoverMenu);
+    slotMachine.attachListeners();
     window.addEventListener("keydown", (event) => {
       if (createPetVisible && !petDrawVisible && event.key === "Enter") {
         event.preventDefault();
         showPetDrawScreen();
+        return;
+      }
+
+      if (petDrawVisible && event.key === "Enter") {
+        event.preventDefault();
+        slotMachine.confirm();
       }
     });
   }

@@ -1,11 +1,23 @@
 .create-pet-stage,
 .pet-draw-stage {
   position: relative;
+  overflow: hidden;
+}
+
+.create-pet-stage {
   width: min(100vw, calc(100vh * 1.8488372));
   max-width: 100vw;
   aspect-ratio: 2544 / 1376;
-  overflow: hidden;
   background: #111213;
+}
+
+.pet-draw-stage {
+  width: min(82vw, calc(78vh * 1.7916667), 1040px);
+  max-width: calc(100vw - 28px);
+  aspect-ratio: 2752 / 1536;
+  background: transparent;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.46));
+  animation: slot-popup-in 220ms ease-out both;
 }
 
 .create-pet-background,
@@ -105,26 +117,182 @@
 }
 
 .create-pet-send-button {
-  left: 77.3%;
-  top: 48.65%;
-  width: 4.1%;
-  height: 7.4%;
+  left: calc(77.3% + 1px);
+  top: calc(48.65% + 19px);
+  width: 3.1365%;
+  height: 5.661%;
 }
 
 .create-pet-close-button,
 .pet-draw-close-button {
-  top: 0.7%;
-  right: 0.35%;
-  width: 2.8%;
-  height: 5.1%;
+  top: calc(0.7% - 7px);
+  right: calc(0.35% - 2px);
+  width: 2.52%;
+  height: 4.59%;
 }
 
 .pet-draw-close-button {
   z-index: 2;
 }
 
+.slot-machine-stage {
+  --slot-spin-up-size: 284.734% 121.908%;
+  --slot-spin-up-position: 4.085% 66.129%;
+  --slot-spin-down-size: 303.474% 129.699%;
+  --slot-spin-down-position: 66.038% 70.886%;
+}
+
+.slot-reels {
+  position: absolute;
+  z-index: 1;
+  left: 24.8%;
+  top: 24.7%;
+  width: 53.8%;
+  height: min(calc(40.8% + 25px), 45.3%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2.2%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.slot-reel {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background-image: var(--slot-reel-strip);
+  background-position-x: center;
+  background-position-y: 0;
+  background-repeat: repeat-y;
+  background-size: 241.206% auto;
+  box-shadow:
+    inset 0 0 0 1px rgba(99, 202, 222, 0.16),
+    inset 0 0 28px rgba(31, 143, 171, 0.16);
+  image-rendering: pixelated;
+}
+
+.slot-reel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 14, 22, 0.48), rgba(7, 14, 22, 0) 22%, rgba(7, 14, 22, 0) 76%, rgba(7, 14, 22, 0.5)),
+    linear-gradient(90deg, rgba(105, 218, 235, 0.1), rgba(0, 0, 0, 0) 18%, rgba(0, 0, 0, 0) 82%, rgba(105, 218, 235, 0.1));
+  pointer-events: none;
+}
+
+.slot-spin-button,
+.slot-confirm-button {
+  position: absolute;
+  z-index: 3;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  image-rendering: pixelated;
+}
+
+.slot-spin-button {
+  left: 50.1%;
+  top: 73%;
+  width: 12.35%;
+  height: 9.2%;
+  background-color: transparent;
+  background-image: var(--slot-button-sprite);
+  background-position: var(--slot-spin-up-position);
+  background-repeat: no-repeat;
+  background-size: var(--slot-spin-up-size);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.slot-spin-button:disabled {
+  opacity: 1;
+  filter: none;
+  cursor: default;
+}
+
+.slot-spin-button.is-pressed {
+  background-position: var(--slot-spin-down-position);
+  background-size: var(--slot-spin-down-size);
+}
+
+.slot-confirm-button {
+  left: 41.15%;
+  top: 75.25%;
+  width: 6.45%;
+  height: 4.8%;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(166, 246, 247, 0.88);
+  background:
+    linear-gradient(180deg, rgba(191, 249, 251, 0.92), rgba(106, 167, 178, 0.88) 46%, rgba(38, 67, 81, 0.94) 48%, rgba(74, 109, 124, 0.96));
+  color: #14222e;
+  cursor: pointer;
+  font-family:
+    Consolas,
+    "Microsoft YaHei UI",
+    monospace;
+  font-size: clamp(8px, 1.35vmin, 17px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
+  box-shadow:
+    inset 0 0 0 1px rgba(22, 45, 57, 0.64),
+    0 3px 0 rgba(18, 31, 42, 0.95),
+    0 0 10px rgba(103, 234, 236, 0.18);
+}
+
+.slot-confirm-button span {
+  transform: translateY(-2%);
+}
+
+.slot-confirm-button:not(:disabled):hover,
+.slot-confirm-button:not(:disabled):focus-visible {
+  filter: brightness(1.08);
+}
+
+.slot-confirm-button:not(:disabled):active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(22, 45, 57, 0.7),
+    0 1px 0 rgba(18, 31, 42, 0.95),
+    0 0 12px rgba(103, 234, 236, 0.24);
+}
+
+.slot-confirm-button:disabled {
+  cursor: default;
+  filter: grayscale(0.38) brightness(0.58);
+  opacity: 0.74;
+}
+
+.slot-spin-button:focus-visible,
+.slot-confirm-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.88);
+  outline-offset: 2px;
+}
+
 .create-pet-icon-button:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.88);
   outline-offset: 2px;
+}
+
+@keyframes slot-popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 700px) {
+  .pet-draw-stage {
+    width: min(94vw, calc(66vh * 1.7916667));
+  }
 }
 

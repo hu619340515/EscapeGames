@@ -115,9 +115,15 @@ export function renderDomUiTemplate(): string {
     </section>
 
     <section class="pet-draw-shell" data-panel="pet-draw" hidden>
-      <div class="pet-draw-stage">
-        <img class="pet-draw-background" src="${createPetAssets.petDrawBackground}" alt="抽宠物" />
-        <button class="create-pet-icon-button pet-draw-close-button" aria-label="返回游戏主菜单" style="--default-frame: url('${createPetAssets.closeDefault}'); --hover-frame: url('${createPetAssets.closeHover}'); --active-frame: url('${createPetAssets.closeActive}'); --disabled-frame: url('${createPetAssets.closeDisabled}')" disabled></button>
+      <div class="pet-draw-stage slot-machine-stage" style="--slot-reel-strip: url('${createPetAssets.slotReelStrip}'); --slot-button-sprite: url('${createPetAssets.slotButton}')">
+        <img class="pet-draw-background" src="${createPetAssets.slotMachineBackground}" alt="LUCKY ZOO" />
+        <div class="slot-reels" aria-hidden="true">
+          <div class="slot-reel" data-ref="slotReel"></div>
+          <div class="slot-reel" data-ref="slotReel"></div>
+          <div class="slot-reel" data-ref="slotReel"></div>
+        </div>
+        <button class="slot-confirm-button" data-action="slot-confirm" aria-label="确认抽到的桌宠" disabled><span>BET</span></button>
+        <button class="slot-spin-button" data-ref="slotSpinButton" aria-label="SPIN" disabled></button>
       </div>
     </section>
 

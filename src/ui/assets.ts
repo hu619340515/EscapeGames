@@ -15,13 +15,15 @@ import closeActive from "../assets/cover/create-pet-close-active.png";
 import closeDefault from "../assets/cover/create-pet-close-default.png";
 import closeDisabled from "../assets/cover/create-pet-close-disabled.png";
 import closeHover from "../assets/cover/create-pet-close-hover.png";
-import createPetBackground from "../assets/cover/create-pet-background.png";
+import createPetBackground from "../../素材/创建宠物.png";
 import sendActive from "../assets/cover/create-pet-send-active.png";
 import sendDefault from "../assets/cover/create-pet-send-default.png";
 import sendDisabled from "../assets/cover/create-pet-send-disabled.png";
 import sendHover from "../assets/cover/create-pet-send-hover.png";
 import keyboardClickSheet from "../assets/cover/keyboard-click-sheet-alpha.png";
-import petDrawBackground from "../assets/cover/pet-draw-background.png";
+import slotButton from "../../素材/老虎机/按钮.png";
+import slotMachineBackground from "../../素材/老虎机/背景.png";
+import slotReelStrip from "../../素材/老虎机/滚动图像.png";
 
 export const coverAssets = {
   background: coverBackground,
@@ -42,7 +44,9 @@ export const coverAssets = {
 
 export const createPetAssets = {
   background: createPetBackground,
-  petDrawBackground,
+  slotButton,
+  slotMachineBackground,
+  slotReelStrip,
   closeDefault,
   closeHover,
   closeActive,

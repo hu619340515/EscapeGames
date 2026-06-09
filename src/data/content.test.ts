@@ -7,6 +7,7 @@ const customization: PlayerCustomization = {
   body: "round",
   personality: "curious",
   startingSkill: "short-hop",
+  petSpecies: "cat",
 };
 
 describe("content integrity", () => {

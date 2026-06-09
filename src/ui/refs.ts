@@ -26,6 +26,9 @@ export interface DomUiRefs {
   createPetPromptTrail: HTMLElement;
   createPetSendButton: HTMLButtonElement;
   createPetCloseButton: HTMLButtonElement;
+  slotReels: HTMLElement[];
+  slotSpinButton: HTMLButtonElement;
+  slotConfirmButton: HTMLButtonElement;
 }
 
 function queryRequired<T extends Element>(root: ParentNode, selector: string): T {
@@ -37,6 +40,11 @@ function queryRequired<T extends Element>(root: ParentNode, selector: string): T
 }
 
 export function collectDomUiRefs(root: HTMLElement): DomUiRefs {
+  const slotReels = Array.from(root.querySelectorAll<HTMLElement>('[data-ref="slotReel"]'));
+  if (slotReels.length !== 3) {
+    throw new Error("Missing UI element: [data-ref=\"slotReel\"]");
+  }
+
   return {
     hud: queryRequired<HTMLElement>(root, '[data-panel="hud"]'),
     start: queryRequired<HTMLElement>(root, '[data-panel="start"]'),
@@ -65,5 +73,8 @@ export function collectDomUiRefs(root: HTMLElement): DomUiRefs {
     createPetPromptTrail: queryRequired<HTMLElement>(root, '[data-ref="createPetPromptTrail"]'),
     createPetSendButton: queryRequired<HTMLButtonElement>(root, '[data-action="create-pet-send"]'),
     createPetCloseButton: queryRequired<HTMLButtonElement>(root, '[data-action="create-pet-close"]'),
+    slotReels,
+    slotSpinButton: queryRequired<HTMLButtonElement>(root, '[data-ref="slotSpinButton"]'),
+    slotConfirmButton: queryRequired<HTMLButtonElement>(root, '[data-action="slot-confirm"]'),
   };
 }

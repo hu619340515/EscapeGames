@@ -1,6 +1,7 @@
 import type { EndingId } from "../game/types";
 import { createCoverAnimation } from "./coverAnimation";
 import { createCoverController } from "./coverController";
+import { createCoverMusicController } from "./coverMusic";
 import { createCreatePetFlow } from "./createPetFlow";
 import { addGameStateListener, dispatchUiEvent, UI_EVENTS } from "./events";
 import { getGameStateFlags, renderHudAndEnding } from "./gameStateRenderer";
@@ -12,6 +13,7 @@ export function createDomUi(root: HTMLElement): void {
 
   const refs = collectDomUiRefs(root);
   const coverAnimation = createCoverAnimation(refs.coverStage);
+  const coverMusic = createCoverMusicController();
   const coverController = createCoverController({
     root,
     coverStage: refs.coverStage,
@@ -65,7 +67,11 @@ export function createDomUi(root: HTMLElement): void {
     refs.petDraw.hidden = flags.isStarted || !createPetFlow.isPetDrawVisible();
     refs.pause.hidden = !flags.isPaused;
     refs.ending.hidden = !(flags.isEndingChoice || flags.isEnded);
-    coverAnimation.setActive(!flags.isStarted && !createPetFlow.isCreatePetVisible() && !createPetFlow.isPetDrawVisible());
+    const isCoverAnimationActive =
+      !flags.isStarted && !createPetFlow.isCreatePetVisible() && !createPetFlow.isPetDrawVisible();
+    coverAnimation.setActive(isCoverAnimationActive);
+    coverMusic.setActive(!flags.isStarted);
+    coverMusic.setKeyboardActive(isCoverAnimationActive);
 
     if (!flags.isStarted) {
       coverController.refreshContinueState();
@@ -77,4 +83,6 @@ export function createDomUi(root: HTMLElement): void {
 
   coverController.refreshContinueState();
   coverController.renderAchievements();
+  coverMusic.setActive(true);
+  coverMusic.setKeyboardActive(true);
 }

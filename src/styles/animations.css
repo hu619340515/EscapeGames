@@ -47,10 +47,10 @@
 @keyframes keyboard-screen-float {
   0%,
   100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(calc(-50% + var(--keyboard-sequence-shift-x, 0px)), calc(-50% - var(--keyboard-sequence-lift, 0px))) scale(var(--keyboard-sequence-scale, 1));
   }
   50% {
-    transform: translate(-50%, -50.8%) scale(1.025);
+    transform: translate(calc(-50% + var(--keyboard-sequence-shift-x, 0px)), calc(-50.8% - var(--keyboard-sequence-lift, 0px))) scale(var(--keyboard-sequence-float-scale, 1.025));
   }
 }
 
@@ -177,6 +177,43 @@
   }
 }
 
+@keyframes panel-indicator-black-blink {
+  0%,
+  28%,
+  62%,
+  100% {
+    opacity: 0;
+  }
+  29%,
+  36%,
+  63%,
+  71% {
+    opacity: 0.92;
+  }
+}
+
+@keyframes panel-indicator-red-green {
+  0%,
+  36% {
+    background: #ff3434;
+    box-shadow:
+      0 0 3px rgba(255, 44, 44, 0.72),
+      0 0 7px rgba(255, 32, 32, 0.28);
+  }
+  37%,
+  68% {
+    background: #54ff73;
+    box-shadow:
+      0 0 3px rgba(84, 255, 115, 0.78),
+      0 0 7px rgba(84, 255, 115, 0.32);
+  }
+  69%,
+  100% {
+    background: #020303;
+    box-shadow: none;
+  }
+}
+
 [hidden] {
   display: none !important;
 }
@@ -227,16 +264,21 @@
   .screen-flicker,
   .screen-edge-glow,
   .rack-light,
+  .panel-indicator,
   .typing-cursor {
     animation: none !important;
   }
 
   .keyboard-sequence {
     background-position: 0 0;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(calc(-50% + var(--keyboard-sequence-shift-x, 0px)), calc(-50% - var(--keyboard-sequence-lift, 0px))) scale(var(--keyboard-sequence-scale, 1));
   }
 
   .rack-light {
     opacity: 0.42;
+  }
+
+  .panel-indicator--black-blink {
+    opacity: 0.35;
   }
 }

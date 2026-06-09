@@ -33,8 +33,9 @@ export function renderDomUiTemplate(): string {
           <div class="screen-scanlines"></div>
           <div class="screen-flicker"></div>
           <svg class="screen-edge-glow" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <polygon class="screen-edge-glow__soft" points="3.2,5 96.1,17.6 99,21.4 99,91.5 96.3,96.8 4.2,91.7 1.2,88.2 1.2,8.4" />
-            <polygon class="screen-edge-glow__hot" points="3.2,5 96.1,17.6 99,21.4 99,91.5 96.3,96.8 4.2,91.7 1.2,88.2 1.2,8.4" />
+            <polygon class="screen-edge-glow__soft" points="5.7,2.2 96.9,14.2 97.6,18.9 97.6,92.6 95.1,95.6 6.1,91.9 4.2,88.8 4.2,6.4" />
+            <polygon class="screen-edge-glow__hot" points="5.7,2.2 96.9,14.2 97.6,18.9 97.6,92.6 95.1,95.6 6.1,91.9 4.2,88.8 4.2,6.4" />
+            <polyline class="screen-edge-glow__bottom" points="94.7,94.7 6.8,91.1" />
           </svg>
         </div>
         <div class="keyboard-sequence" style="background-image: url('${coverAssets.keyboardClickSheet}')" aria-hidden="true"></div>

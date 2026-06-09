@@ -6,31 +6,31 @@ export interface CoverMusicController {
   setKeyboardActive(active: boolean): void;
 }
 
+type WindowWithCoverMusicCleanup = Window & {
+  __coverMusicCleanup?: () => void;
+};
+
 export function createCoverMusicController(): CoverMusicController {
+  (window as WindowWithCoverMusicCleanup).__coverMusicCleanup?.();
+
   const audio = new Audio(coverMusicUrl);
   audio.loop = true;
   audio.preload = "auto";
   audio.volume = 0.5;
 
-  const keyboardClicks = Array.from({ length: 4 }, () => {
-    const click = new Audio(keyboardClickUrl);
-    click.preload = "auto";
-    click.volume = 0.07;
-    return click;
-  });
+  const keyboardClick = new Audio(keyboardClickUrl);
+  keyboardClick.preload = "auto";
+  keyboardClick.volume = 0.035;
   const keyboardClickMs = 420;
 
   let shouldPlay = false;
   let shouldPlayKeyboard = false;
   let canPlayEffects = false;
   let keyboardClickTimer = 0;
-  let keyboardClickIndex = 0;
 
   function playKeyboardClick(): void {
-    const click = keyboardClicks[keyboardClickIndex];
-    keyboardClickIndex = (keyboardClickIndex + 1) % keyboardClicks.length;
-    click.currentTime = 0;
-    void click.play().catch(() => {
+    keyboardClick.currentTime = 0;
+    void keyboardClick.play().catch(() => {
       canPlayEffects = false;
       stopKeyboardClicks();
     });
@@ -48,10 +48,8 @@ export function createCoverMusicController(): CoverMusicController {
   function stopKeyboardClicks(): void {
     window.clearInterval(keyboardClickTimer);
     keyboardClickTimer = 0;
-    keyboardClicks.forEach((click) => {
-      click.pause();
-      click.currentTime = 0;
-    });
+    keyboardClick.pause();
+    keyboardClick.currentTime = 0;
   }
 
   async function attemptPlay(): Promise<void> {
@@ -74,6 +72,16 @@ export function createCoverMusicController(): CoverMusicController {
 
   window.addEventListener("pointerdown", handleInteraction, { passive: true });
   window.addEventListener("keydown", handleInteraction);
+
+  (window as WindowWithCoverMusicCleanup).__coverMusicCleanup = () => {
+    shouldPlay = false;
+    shouldPlayKeyboard = false;
+    audio.pause();
+    audio.currentTime = 0;
+    stopKeyboardClicks();
+    window.removeEventListener("pointerdown", handleInteraction);
+    window.removeEventListener("keydown", handleInteraction);
+  };
 
   return {
     setActive(active: boolean): void {

@@ -25,12 +25,18 @@ export function createDomUi(root: HTMLElement): void {
     root,
     refs,
     closeCoverPanels: coverController.closePanels,
-    setCoverAnimationActive: (active) => coverAnimation.setActive(active),
+    setCoverAnimationActive: (active) => {
+      coverAnimation.setActive(active);
+      coverMusic.setKeyboardActive(active);
+    },
   });
 
   createPetFlow.attachListeners();
 
-  refs.continueButton.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.CONTINUE_RUN));
+  refs.continueButton.addEventListener("click", () => {
+    coverMusic.setKeyboardActive(false);
+    dispatchUiEvent(UI_EVENTS.CONTINUE_RUN);
+  });
   root.querySelector('[data-action="pause"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.TOGGLE_PAUSE));
   root.querySelector('[data-action="resume"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.TOGGLE_PAUSE));
   root.querySelector('[data-action="save"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.SAVE_RUN));

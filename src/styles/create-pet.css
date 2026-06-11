@@ -193,8 +193,8 @@
 }
 
 .slot-spin-button {
-  left: 50.1%;
-  top: 73%;
+  left: calc(50.1% - 50px);
+  top: calc(73% + 10px);
   width: 12.35%;
   height: 9.2%;
   background-color: transparent;
@@ -218,8 +218,8 @@
 }
 
 .slot-confirm-button {
-  left: 41.15%;
-  top: 75.25%;
+  left: calc(41.15% - 50px);
+  top: calc(75.25% + 10px);
   width: 6.45%;
   height: 4.8%;
   display: grid;

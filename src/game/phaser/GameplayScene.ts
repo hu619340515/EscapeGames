@@ -5,6 +5,12 @@ import { GameController } from "../simulation/GameController";
 import type { BossDef } from "../types";
 import { createGameKeys, type GameKeyName } from "./inputConfig";
 import {
+  getPetAnimationKey,
+  getPetTextureKey,
+  isAnimalPetChapter,
+  type PetAnimationName,
+} from "./petSprites";
+import {
   getCollectibleCount,
   getCollectiblePosition,
   getHazardCount,
@@ -39,6 +45,7 @@ export class GameplayScene extends Phaser.Scene {
   private stealthUntil = 0;
   private pingUntil = 0;
   private lastAutoExitAt = 0;
+  private playerPetTextureKey?: string;
 
   constructor() {
     super("GameplayScene");
@@ -182,6 +189,7 @@ export class GameplayScene extends Phaser.Scene {
     this.tweens.killAll();
     this.time.removeAllEvents();
     this.player = undefined;
+    this.playerPetTextureKey = undefined;
     this.bossSprite = undefined;
     this.bossLabel = undefined;
     this.bossHpBack = undefined;
@@ -233,7 +241,9 @@ export class GameplayScene extends Phaser.Scene {
 
   private createPlayer(): void {
     const chapter = this.controller.currentChapter();
-    const texture = chapter.index < 4 ? "player-pet" : "player-code";
+    const shouldUseAnimalPet = isAnimalPetChapter(chapter.id);
+    const texture = shouldUseAnimalPet ? getPetTextureKey(this.controller.state.customization.petSpecies) : "player-code";
+    this.playerPetTextureKey = shouldUseAnimalPet ? texture : undefined;
     this.player = this.physics.add.sprite(96, 700, texture);
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(15);
@@ -242,8 +252,12 @@ export class GameplayScene extends Phaser.Scene {
     this.player.setData("lastDamageAt", 0);
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    body.setSize(chapter.index < 4 ? 18 : 24, chapter.index < 4 ? 18 : 18);
-    body.setOffset(chapter.index < 4 ? 3 : 2, chapter.index < 4 ? 5 : 4);
+    body.setSize(shouldUseAnimalPet ? 22 : 24, shouldUseAnimalPet ? 28 : 18);
+    body.setOffset(shouldUseAnimalPet ? 13 : 2, shouldUseAnimalPet ? 16 : 4);
+
+    if (this.playerPetTextureKey) {
+      this.player.play(getPetAnimationKey(this.playerPetTextureKey, "idle"));
+    }
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
   }
@@ -394,6 +408,7 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     const canWallCling = this.controller.hasAbility("cling") && (body.blocked.left || body.blocked.right);
+    this.player.setData("isWallClinging", canWallCling && body.velocity.y > 60);
     if (canWallCling && body.velocity.y > 60) {
       this.player.setVelocityY(60);
     }
@@ -668,10 +683,34 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
     this.player.setAlpha(time < this.stealthUntil ? 0.46 : 1);
+    this.updatePlayerAnimation();
     if (time < this.pingUntil && this.exitSprite) {
       this.exitSprite.setTint(0xffffff);
     } else if (this.exitSprite) {
       this.exitSprite.setTint(this.controller.canExitChapter() ? this.controller.currentChapter().palette.accent : 0x334050);
+    }
+  }
+
+  private updatePlayerAnimation(): void {
+    if (!this.player || !this.playerPetTextureKey) {
+      return;
+    }
+
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const isWallClinging = Boolean(this.player.getData("isWallClinging"));
+    let animation: PetAnimationName = "idle";
+
+    if (isWallClinging) {
+      animation = "climb";
+    } else if (!body.blocked.down) {
+      animation = "jump";
+    } else if (Math.abs(body.velocity.x) > 18) {
+      animation = "run";
+    }
+
+    const key = getPetAnimationKey(this.playerPetTextureKey, animation);
+    if (this.player.anims.currentAnim?.key !== key) {
+      this.player.play(key, true);
     }
   }
 

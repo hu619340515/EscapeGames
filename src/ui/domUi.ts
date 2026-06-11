@@ -3,7 +3,7 @@ import { createCoverAnimation } from "./coverAnimation";
 import { createCoverController } from "./coverController";
 import { createCoverMusicController } from "./coverMusic";
 import { createCreatePetFlow } from "./createPetFlow";
-import { addGameStateListener, dispatchUiEvent, UI_EVENTS } from "./events";
+import { addGameStateListener, dispatchUiEvent, type GmFeature, UI_EVENTS } from "./events";
 import { getGameStateFlags, renderHudAndEnding } from "./gameStateRenderer";
 import { collectDomUiRefs } from "./refs";
 import { renderDomUiTemplate } from "./template";
@@ -42,6 +42,18 @@ export function createDomUi(root: HTMLElement): void {
   root.querySelector('[data-action="save"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.SAVE_RUN));
   root.querySelector('[data-action="reset"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
   root.querySelector('[data-action="reset-ending"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
+  root.querySelector('[data-action="gm-reset"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
+  root.querySelectorAll<HTMLButtonElement>('[data-action="gm-toggle"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      const enabled = button.getAttribute("aria-pressed") !== "true";
+      button.setAttribute("aria-pressed", String(enabled));
+      button.dataset.active = String(enabled);
+      dispatchUiEvent(UI_EVENTS.TOGGLE_GM_FEATURE, {
+        feature: button.dataset.gmFeature as GmFeature,
+        enabled,
+      });
+    });
+  });
   root.querySelector('[data-action="cover-options"]')!.addEventListener("click", () => {
     coverController.refreshContinueState();
     coverController.showPanel("options");

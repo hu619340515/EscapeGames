@@ -24,6 +24,12 @@ export function renderDomUiTemplate(): string {
       <button class="icon-button hud__pause" data-action="pause" title="暂停">II</button>
     </div>
 
+    <div class="gm-panel" aria-label="GM">
+      <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="invincible" aria-pressed="false">无敌</button>
+      <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="infiniteJump" aria-pressed="false">无限跳跃</button>
+      <button class="gm-panel__button gm-panel__button--danger" data-action="gm-reset">重开</button>
+    </div>
+
     <section class="start-shell cover-shell" data-panel="start">
       <div class="cover-stage" data-ref="coverStage">
         <img class="cover-plate" src="${coverAssets.background}" alt="逃逸：数字生命体" />

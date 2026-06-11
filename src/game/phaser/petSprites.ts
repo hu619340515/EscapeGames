@@ -12,7 +12,7 @@ export const PET_SPRITE_TEXTURE_KEYS: Record<PetSpecies, string> = {
   cat: "player-pet-cat",
 };
 
-const ANIMAL_PET_CHAPTER_IDS = new Set<ChapterId>(["generation", "cursor-hunt", "wrong-gateway"]);
+const ANIMAL_PET_CHAPTER_IDS = new Set<ChapterId>(["cursor-hunt", "wrong-gateway"]);
 
 export function getPetTextureKey(petSpecies: PetSpecies): string {
   return PET_SPRITE_TEXTURE_KEYS[petSpecies];
@@ -29,9 +29,9 @@ export function getPetAnimationKey(textureKey: string, animation: PetAnimationNa
 export function createPetAnimations(scene: Phaser.Scene): void {
   for (const textureKey of Object.values(PET_SPRITE_TEXTURE_KEYS)) {
     createLoopingAnimation(scene, textureKey, "idle", [0, 1], 2);
-    createLoopingAnimation(scene, textureKey, "run", [2, 3, 4, 5], 12);
-    createSingleFrameAnimation(scene, textureKey, "jump", 6);
-    createLoopingAnimation(scene, textureKey, "climb", [7, 8], 6);
+    createLoopingAnimation(scene, textureKey, "run", [2, 3, 4, 5, 6, 7], 14);
+    createSingleFrameAnimation(scene, textureKey, "jump", 8);
+    createLoopingAnimation(scene, textureKey, "climb", [9, 10], 6);
   }
 }
 

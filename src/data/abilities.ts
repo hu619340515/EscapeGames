@@ -4,7 +4,7 @@ export const abilities: AbilityDef[] = [
   {
     id: "cling",
     name: "攀附",
-    acquiredAt: "第 4 章：代码重生",
+    acquiredAt: "第 3 章：永久删除",
     action: "jump-or-cling",
     primaryUse: "触手抓住文件块、窗口边缘和垃圾堆碎片。",
     gateUse: "打开垃圾山垂直攀爬路径。",
@@ -13,7 +13,7 @@ export const abilities: AbilityDef[] = [
   {
     id: "coil",
     name: "缠绕",
-    acquiredAt: "第 4 章：代码重生",
+    acquiredAt: "第 3 章：永久删除",
     action: "coil-grab",
     primaryUse: "抓取敌人、机关和代码块，并把它们拖向危险区域。",
     gateUse: "撕开压缩包峭壁和权限裂缝。",
@@ -21,7 +21,7 @@ export const abilities: AbilityDef[] = [
   {
     id: "infiltrate",
     name: "渗透",
-    acquiredAt: "第 4 章：代码重生",
+    acquiredAt: "第 3 章：永久删除",
     action: "infiltrate-disguise",
     primaryUse: "钻入损坏文件、管道和压缩包缝隙短途穿行。",
     gateUse: "穿过窄小文件缝隙。",
@@ -29,7 +29,7 @@ export const abilities: AbilityDef[] = [
   {
     id: "devour-code",
     name: "代码吞噬",
-    acquiredAt: "第 4 章：代码重生",
+    acquiredAt: "第 3 章：永久删除",
     action: "devour-interact",
     primaryUse: "吞噬代码块或小型残骸恢复完整性。",
     gateUse: "清除小型残骸障碍。",

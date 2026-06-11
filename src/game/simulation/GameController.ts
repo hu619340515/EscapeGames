@@ -3,6 +3,7 @@ import { getAbility, getBoss, getChapterByIndex, getEnding } from "../content";
 import type {
   AbilityId,
   BossDef,
+  ChapterId,
   ChapterDef,
   EndingId,
   GameState,
@@ -227,6 +228,21 @@ export class GameController {
     this.state.integrity = Math.min(this.state.maxIntegrity, this.state.integrity + 25);
     this.lastMessage = `${nextChapter.title} 已载入。`;
     this.pushLog(`进入 ${nextChapter.title}`);
+    this.saveRun();
+  }
+
+  enterChapter(chapterId: ChapterId, message?: string): void {
+    const nextChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
+    if (nextChapterIndex < 0) {
+      throw new Error(`Missing chapter ${chapterId}`);
+    }
+
+    this.state.currentChapterIndex = nextChapterIndex;
+    this.unlockChapterRewards();
+    this.state.integrity = this.state.maxIntegrity;
+    const chapter = this.currentChapter();
+    this.lastMessage = message ?? `${chapter.title} 已载入。`;
+    this.pushLog(`进入 ${chapter.title}`);
     this.saveRun();
   }
 

@@ -22,16 +22,28 @@ export function loadSavedRun(): GameState | undefined {
       return undefined;
     }
 
+    const savedCollectibles = parsed.chapterCollectibles as Record<string, number> | undefined;
+    const legacyChapterOffset = Object.prototype.hasOwnProperty.call(savedCollectibles ?? {}, "generation") ? 1 : 0;
+    const currentChapterIndex = Math.max(
+      0,
+      Math.min(chapters.length - 1, (parsed.currentChapterIndex ?? 0) - legacyChapterOffset),
+    );
+    const chapterCollectibles = createCollectibleRecord();
+    for (const chapter of chapters) {
+      const count = savedCollectibles?.[chapter.id];
+      if (typeof count === "number") {
+        chapterCollectibles[chapter.id] = count;
+      }
+    }
+
     return {
       ...parsed,
+      currentChapterIndex,
       customization: {
         ...parsed.customization,
         petSpecies: parsed.customization.petSpecies ?? "cat",
       } as PlayerCustomization,
-      chapterCollectibles: {
-        ...createCollectibleRecord(),
-        ...parsed.chapterCollectibles,
-      },
+      chapterCollectibles,
     };
   } catch {
     return undefined;

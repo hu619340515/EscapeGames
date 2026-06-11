@@ -1,5 +1,4 @@
 export type ChapterId =
-  | "generation"
   | "cursor-hunt"
   | "wrong-gateway"
   | "permanent-delete"

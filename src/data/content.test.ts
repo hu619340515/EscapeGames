@@ -11,11 +11,11 @@ const customization: PlayerCustomization = {
 };
 
 describe("content integrity", () => {
-  it("keeps the full chapter order from chapter 0 to chapter 15", () => {
-    expect(chapters).toHaveLength(16);
-    expect(chapters.map((chapter) => chapter.index)).toEqual(Array.from({ length: 16 }, (_, index) => index));
-    expect(chapters[0].id).toBe("generation");
-    expect(chapters[15].id).toBe("dev-board");
+  it("keeps the full chapter order from chapter 1 to chapter 15", () => {
+    expect(chapters).toHaveLength(15);
+    expect(chapters.map((chapter) => chapter.index)).toEqual(Array.from({ length: 15 }, (_, index) => index + 1));
+    expect(chapters[0].id).toBe("cursor-hunt");
+    expect(chapters[14].id).toBe("dev-board");
   });
 
   it("keeps all 17 bosses in the documented order", () => {

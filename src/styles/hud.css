@@ -96,3 +96,38 @@
   height: 42px;
   pointer-events: auto;
 }
+
+.gm-panel {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  z-index: 40;
+  display: grid;
+  gap: 8px;
+  width: 88px;
+  pointer-events: auto;
+  transform: translateY(-50%);
+}
+
+.gm-panel__button {
+  min-height: 36px;
+  padding: 6px 8px;
+  border-color: rgba(255, 213, 106, 0.62);
+  background: rgba(12, 10, 4, 0.82);
+  color: #ffe7a1;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.gm-panel__button[data-active="true"] {
+  border-color: #ffffff;
+  background: #ffd56a;
+  color: #171000;
+}
+
+.gm-panel__button--danger {
+  border-color: rgba(255, 95, 117, 0.68);
+  color: #ffd6de;
+}

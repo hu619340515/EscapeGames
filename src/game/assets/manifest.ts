@@ -11,11 +11,19 @@ export interface AssetManifestEntry {
 
 export const assetManifest: AssetManifestEntry[] = [
   {
+    key: "cursor-hunt-desktop-bg",
+    kind: "ui",
+    width: 1672,
+    height: 941,
+    replaceWith: "src/assets/chapter1/cursor-hunt-desktop.png",
+    description: "第 1 章专属桌面追逐关卡底图，包含图标平台、窗口边缘、任务栏阴影和右下角隐藏门。",
+  },
+  {
     key: "player-pet",
     kind: "sprite",
     width: 24,
     height: 24,
-    description: "第 0-3 章可爱 agent 桌宠占位像素图。",
+    description: "第 1-2 章可爱 agent 桌宠占位像素图。",
   },
   {
     key: "player-code",
@@ -65,6 +73,55 @@ export const assetManifest: AssetManifestEntry[] = [
     width: 40,
     height: 48,
     description: "章节出口、网络节点或设备端口占位图。",
+  },
+  {
+    key: "pd-background",
+    kind: "tile",
+    width: 256,
+    height: 256,
+    description: "第 3 章粉碎器内壁背景纹理，由回收站器官化机器和代码残影组成。",
+  },
+  {
+    key: "pd-gear",
+    kind: "fx",
+    width: 96,
+    height: 96,
+    description: "第 3 章粉碎齿轮危险机关。",
+  },
+  {
+    key: "pd-anchor",
+    kind: "fx",
+    width: 36,
+    height: 36,
+    description: "第 3 章触手牵引用红色锚点。",
+  },
+  {
+    key: "pd-process",
+    kind: "sprite",
+    width: 48,
+    height: 40,
+    description: "第 3 章清理进程敌人占位图。",
+  },
+  {
+    key: "pd-cache",
+    kind: "sprite",
+    width: 46,
+    height: 40,
+    description: "第 3 章可吞噬缓存囊与敌人残骸。",
+  },
+  {
+    key: "pd-file-shell",
+    kind: "sprite",
+    width: 82,
+    height: 52,
+    description: "第 3 章可渗透的损坏文件壳藏身点。",
+  },
+  {
+    key: "pd-exit",
+    kind: "ui",
+    width: 78,
+    height: 92,
+    description: "第 3 章粉碎器外裂缝出口。",
   },
 ];
 

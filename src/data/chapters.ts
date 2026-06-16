@@ -55,11 +55,11 @@ export const chapters: ChapterDef[] = [
     title: "第 1 章：光标猎杀",
     shortTitle: "光标猎杀",
     theme: "desktop",
-    objective: "逃跑，别被红色光标抓住；能找到右下角隐藏门就钻进去。",
+    objective: "观察红色光标的落点预警，躲开跳扑并钻进右下角隐藏门。",
     flowNote: "这一段有两条出口：被抓会直接进入永久删除；逃进隐藏门则提前看见错误网关。",
     keyBeats: [
       "鼠标先捕捉桌面文件丢入回收站。",
-      "框选、拖拽、右键菜单、双击震荡和光标冲刺陆续出现。",
+      "框选、右键菜单、双击震荡和带落点预警的光标跳扑陆续出现。",
       "追逐路线把主角压向任务栏阴影里的右下角小门。",
     ],
     palette: desktopPalette,

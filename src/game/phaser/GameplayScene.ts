@@ -29,6 +29,8 @@ import {
   PLAYER_SPEED,
 } from "./worldConfig";
 
+type CursorJumpState = "watching" | "aiming" | "jumping" | "recovering";
+
 export class GameplayScene extends Phaser.Scene {
   private controller!: GameController;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -36,7 +38,16 @@ export class GameplayScene extends Phaser.Scene {
   private player?: Phaser.Physics.Arcade.Sprite;
   private cursorHunter?: Phaser.Physics.Arcade.Sprite;
   private cursorWarning?: Phaser.GameObjects.Arc;
+  private cursorLandingMarker?: Phaser.GameObjects.Arc;
   private cursorHunterStartedAt = 0;
+  private cursorJumpState: CursorJumpState = "watching";
+  private cursorNextJumpAt = 0;
+  private cursorJumpStartedAt = 0;
+  private cursorJumpDuration = 720;
+  private cursorJumpFromX = 0;
+  private cursorJumpFromY = 0;
+  private cursorJumpToX = 0;
+  private cursorJumpToY = 0;
   private bossSprite?: Phaser.Physics.Arcade.Sprite;
   private bossLabel?: Phaser.GameObjects.Text;
   private bossHpBack?: Phaser.GameObjects.Rectangle;
@@ -272,7 +283,15 @@ export class GameplayScene extends Phaser.Scene {
     this.playerPetTextureKey = undefined;
     this.cursorHunter = undefined;
     this.cursorWarning = undefined;
+    this.cursorLandingMarker = undefined;
     this.cursorHunterStartedAt = 0;
+    this.cursorJumpState = "watching";
+    this.cursorNextJumpAt = 0;
+    this.cursorJumpStartedAt = 0;
+    this.cursorJumpFromX = 0;
+    this.cursorJumpFromY = 0;
+    this.cursorJumpToX = 0;
+    this.cursorJumpToY = 0;
     this.isCursorCaughtSequencePlaying = false;
     this.bossSprite = undefined;
     this.bossLabel = undefined;
@@ -518,6 +537,8 @@ export class GameplayScene extends Phaser.Scene {
     this.cursorHunter.setAlpha(0.9);
     this.cursorHunter.setTint(0xff2f50);
     this.cursorHunterStartedAt = this.time.now;
+    this.cursorJumpState = "watching";
+    this.cursorNextJumpAt = this.time.now + 1500;
     const body = this.cursorHunter.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
     body.setSize(38, 46);
@@ -532,6 +553,12 @@ export class GameplayScene extends Phaser.Scene {
       duration: 720,
       ease: "Sine.inOut",
     });
+
+    this.cursorLandingMarker = this.add
+      .circle(this.cursorHunter.x, this.cursorHunter.y, 44, 0xff2447, 0.1)
+      .setStrokeStyle(3, 0xff6b82, 0.9)
+      .setDepth(22)
+      .setVisible(false);
   }
 
   private createCollisions(): void {
@@ -592,22 +619,120 @@ export class GameplayScene extends Phaser.Scene {
 
     const observeDelay = 1300;
     const chapterElapsed = Math.max(0, time - this.cursorHunterStartedAt);
-    const elapsed = Math.max(0, chapterElapsed - observeDelay);
-    const huntSpeed = Phaser.Math.Clamp(120 + elapsed / 35, 120, 310);
-    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
-    const targetX = this.player.x + (playerBody.velocity.x > 0 ? -18 : 28);
-    const targetY = this.player.y - 8;
-    const distance = Phaser.Math.Distance.Between(this.cursorHunter.x, this.cursorHunter.y, targetX, targetY);
 
     if (chapterElapsed < observeDelay) {
-      this.cursorHunter.setVelocity(0, Math.sin(time / 160) * 18);
-    } else if (distance > 42) {
-      this.physics.moveTo(this.cursorHunter, targetX, targetY, huntSpeed);
-    } else {
       this.cursorHunter.setVelocity(0, 0);
+      this.cursorHunter.y = 150 + Math.sin(time / 160) * 18;
+      this.updateCursorVisuals(time);
+      return;
     }
 
-    this.cursorHunter.setRotation(Math.sin(time / 180) * 0.08);
+    if (this.cursorJumpState === "watching" && time >= this.cursorNextJumpAt) {
+      this.beginCursorAim(time);
+    }
+
+    if (this.cursorJumpState === "aiming" && time - this.cursorJumpStartedAt >= 680) {
+      this.beginCursorJump(time);
+    }
+
+    if (this.cursorJumpState === "jumping") {
+      this.updateCursorJump(time);
+    }
+
+    if (this.cursorJumpState === "recovering" && time >= this.cursorNextJumpAt) {
+      this.cursorJumpState = "watching";
+      this.cursorNextJumpAt = time + Phaser.Math.Between(420, 760);
+    }
+
+    this.updateCursorVisuals(time);
+  }
+
+  private beginCursorAim(time: number): void {
+    if (!this.cursorHunter || !this.player) {
+      return;
+    }
+
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    const leadX = Phaser.Math.Clamp(playerBody.velocity.x * 0.34, -120, 120);
+    this.cursorJumpToX = Phaser.Math.Clamp(this.player.x + leadX, 80, this.currentWorldWidth - 90);
+    this.cursorJumpToY = Phaser.Math.Clamp(this.player.y + 8, 120, this.currentWorldHeight - 80);
+    this.cursorJumpFromX = this.cursorHunter.x;
+    this.cursorJumpFromY = this.cursorHunter.y;
+    this.cursorJumpStartedAt = time;
+    this.cursorJumpState = "aiming";
+    this.cursorHunter.setVelocity(0, 0);
+    this.cursorHunter.setScale(0.98, 0.7);
+
+    if (this.cursorLandingMarker) {
+      this.cursorLandingMarker
+        .setPosition(this.cursorJumpToX, this.cursorJumpToY)
+        .setScale(0.58)
+        .setAlpha(0.22)
+        .setVisible(true);
+      this.tweens.add({
+        targets: this.cursorLandingMarker,
+        scale: 1.35,
+        alpha: 0.72,
+        duration: 620,
+        ease: "Sine.inOut",
+      });
+    }
+  }
+
+  private beginCursorJump(time: number): void {
+    if (!this.cursorHunter) {
+      return;
+    }
+
+    this.cursorJumpFromX = this.cursorHunter.x;
+    this.cursorJumpFromY = this.cursorHunter.y;
+    this.cursorJumpStartedAt = time;
+    this.cursorJumpDuration = Phaser.Math.Clamp(
+      Phaser.Math.Distance.Between(this.cursorJumpFromX, this.cursorJumpFromY, this.cursorJumpToX, this.cursorJumpToY) * 1.55,
+      560,
+      880,
+    );
+    this.cursorJumpState = "jumping";
+    this.cursorHunter.setScale(0.78, 1.06);
+  }
+
+  private updateCursorJump(time: number): void {
+    if (!this.cursorHunter) {
+      return;
+    }
+
+    const progress = Phaser.Math.Clamp((time - this.cursorJumpStartedAt) / this.cursorJumpDuration, 0, 1);
+    const eased = Phaser.Math.Easing.Sine.InOut(progress);
+    const jumpArc = Math.sin(progress * Math.PI) * 150;
+    const x = Phaser.Math.Linear(this.cursorJumpFromX, this.cursorJumpToX, eased);
+    const y = Phaser.Math.Linear(this.cursorJumpFromY, this.cursorJumpToY, eased) - jumpArc;
+
+    this.cursorHunter.setPosition(x, y);
+    this.cursorHunter.setRotation(Phaser.Math.Linear(-0.38, 0.42, progress));
+
+    if (progress >= 1) {
+      this.cursorJumpState = "recovering";
+      this.cursorNextJumpAt = time + 560;
+      this.cursorHunter.setScale(1.02, 0.76);
+      this.cameras.main.shake(70, 0.0025);
+      this.cursorLandingMarker?.setVisible(false);
+    }
+  }
+
+  private updateCursorVisuals(time: number): void {
+    if (!this.cursorHunter) {
+      return;
+    }
+
+    if (this.cursorJumpState !== "jumping") {
+      this.cursorHunter.setRotation(Math.sin(time / 180) * 0.08);
+    }
+    if (this.cursorJumpState === "watching") {
+      this.cursorHunter.setScale(0.84 + Math.sin(time / 260) * 0.03);
+    }
+    if (this.cursorJumpState === "recovering") {
+      this.cursorHunter.setScale(1, 0.82 + Math.sin(time / 130) * 0.04);
+    }
     this.cursorHunter.setAlpha(0.82 + Math.sin(time / 95) * 0.14);
     if (this.cursorWarning) {
       this.cursorWarning.setPosition(this.cursorHunter.x + 12, this.cursorHunter.y + 18);
@@ -618,9 +743,12 @@ export class GameplayScene extends Phaser.Scene {
     if (!this.player || !this.cursorHunter || this.isCursorCaughtSequencePlaying || this.gmFeatures.invincible) {
       return;
     }
+    if (!this.isCursorJumpCatchWindow()) {
+      return;
+    }
 
     this.isCursorCaughtSequencePlaying = true;
-    this.controller.note("红色光标抓住了桌宠，回收站开始粉碎流程。", true);
+    this.controller.note("红色光标跳扑命中桌宠，回收站开始粉碎流程。", true);
     this.emitState();
     this.cameras.main.shake(320, 0.011);
 
@@ -666,6 +794,15 @@ export class GameplayScene extends Phaser.Scene {
       this.rebuildChapter();
       this.emitState();
     });
+  }
+
+  private isCursorJumpCatchWindow(): boolean {
+    if (this.cursorJumpState !== "jumping") {
+      return false;
+    }
+
+    const progress = Phaser.Math.Clamp((this.time.now - this.cursorJumpStartedAt) / this.cursorJumpDuration, 0, 1);
+    return progress >= 0.45;
   }
 
   private updatePlayerMovement(): void {

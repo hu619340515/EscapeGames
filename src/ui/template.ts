@@ -1,8 +1,13 @@
 import { coverAssets, createPetAssets } from "./assets";
 import { DEFAULT_PROMPT } from "./constants";
+import { chapters } from "../data";
 
 function option(label: string, value: string): string {
   return `<option value="${value}">${label}</option>`;
+}
+
+function renderGmChapterOptions(): string {
+  return chapters.map((chapter) => option(`${chapter.index}. ${chapter.shortTitle}`, chapter.id)).join("");
 }
 
 export function renderDomUiTemplate(): string {
@@ -25,6 +30,12 @@ export function renderDomUiTemplate(): string {
     </div>
 
     <div class="gm-panel" aria-label="GM">
+      <label class="gm-panel__field">
+        <span>关卡</span>
+        <select class="gm-panel__select" data-action="gm-select-chapter" data-ref="gmChapterSelect">
+          ${renderGmChapterOptions()}
+        </select>
+      </label>
       <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="invincible" aria-pressed="false">无敌</button>
       <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="infiniteJump" aria-pressed="false">无限跳跃</button>
       <button class="gm-panel__button gm-panel__button--danger" data-action="gm-reset">重开</button>

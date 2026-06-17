@@ -1,4 +1,4 @@
-import type { EndingId, GameUiPayload, PlayerCustomization } from "../game/types";
+import type { ChapterId, EndingId, GameUiPayload, PlayerCustomization } from "../game/types";
 
 export interface StartRunDetail {
   prompt: string;
@@ -16,6 +16,10 @@ export interface ToggleGmFeatureDetail {
   enabled: boolean;
 }
 
+export interface SelectGmChapterDetail {
+  chapterId: ChapterId;
+}
+
 export const UI_EVENTS = {
   START_RUN: "ui:start-run",
   CONTINUE_RUN: "ui:continue-run",
@@ -24,12 +28,13 @@ export const UI_EVENTS = {
   CHOOSE_ENDING: "ui:choose-ending",
   SAVE_RUN: "ui:save-run",
   TOGGLE_GM_FEATURE: "ui:toggle-gm-feature",
+  SELECT_GM_CHAPTER: "ui:select-gm-chapter",
 } as const;
 
 export const GAME_STATE_EVENT = "game:state";
 
 export type UiEventName = (typeof UI_EVENTS)[keyof typeof UI_EVENTS];
-export type UiEventDetail = StartRunDetail | ChooseEndingDetail | ToggleGmFeatureDetail;
+export type UiEventDetail = StartRunDetail | ChooseEndingDetail | ToggleGmFeatureDetail | SelectGmChapterDetail;
 
 export function dispatchUiEvent(name: UiEventName, detail?: UiEventDetail): void {
   window.dispatchEvent(new CustomEvent(name, { detail }));

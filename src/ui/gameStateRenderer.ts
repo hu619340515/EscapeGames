@@ -2,6 +2,8 @@ import { endings } from "../data";
 import type { GameUiPayload } from "../game/types";
 import type { DomUiRefs } from "./refs";
 
+const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
+
 export interface GameStateFlags {
   isStarted: boolean;
   isPaused: boolean;
@@ -20,6 +22,8 @@ export function getGameStateFlags(payload: GameUiPayload): GameStateFlags {
 
 export function renderHudAndEnding(payload: GameUiPayload, refs: DomUiRefs): void {
   const flags = getGameStateFlags(payload);
+  const isWrongGatewayWaiting =
+    payload.chapter.id === "wrong-gateway" && payload.state.flags[WRONG_GATEWAY_CHANGED_FLAG] !== true;
 
   refs.chapter.textContent = payload.chapter.title;
   refs.objective.textContent = payload.currentBoss
@@ -32,6 +36,8 @@ export function renderHudAndEnding(payload: GameUiPayload, refs: DomUiRefs): voi
 
   refs.boss.textContent = payload.currentBoss
     ? `Boss ${payload.currentBoss.order}/17: ${payload.currentBoss.name} -> ${payload.currentBoss.rewardLabel}`
+    : isWrongGatewayWaiting
+      ? "错误网关未响应"
     : "章节出口已开放";
 
   const collectibleCount = payload.state.chapterCollectibles[payload.chapter.id] ?? 0;
@@ -52,6 +58,7 @@ export function renderHudAndEnding(payload: GameUiPayload, refs: DomUiRefs): voi
       return item;
     }),
   );
+  refs.log.hidden = payload.state.log.length === 0;
 
   if (flags.isEndingChoice) {
     refs.endingTitle.textContent = "终局接口";

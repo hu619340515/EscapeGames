@@ -104,9 +104,34 @@
   z-index: 40;
   display: grid;
   gap: 8px;
-  width: 88px;
+  width: 156px;
   pointer-events: auto;
   transform: translateY(-50%);
+}
+
+.gm-panel__field {
+  display: grid;
+  gap: 5px;
+  min-height: 52px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 213, 106, 0.62);
+  background: rgba(12, 10, 4, 0.82);
+  color: #ffe7a1;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.gm-panel__select {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid rgba(85, 242, 220, 0.36);
+  border-radius: 4px;
+  background: #101822;
+  color: #e7fbff;
+  font-size: 12px;
 }
 
 .gm-panel__button {

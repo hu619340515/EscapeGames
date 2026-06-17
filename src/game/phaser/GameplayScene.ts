@@ -3,6 +3,7 @@ import {
   dispatchGameState,
   UI_EVENTS,
   type ChooseEndingDetail,
+  type SelectGmChapterDetail,
   type StartRunDetail,
   type ToggleGmFeatureDetail,
 } from "../../ui/events";
@@ -31,6 +32,36 @@ import {
 
 type CursorJumpState = "watching" | "aiming" | "jumping" | "recovering";
 
+interface GatewayDigitCell {
+  block: Phaser.GameObjects.Rectangle;
+  frame: Phaser.GameObjects.Image;
+  label: Phaser.GameObjects.Text;
+  value: number;
+  changed: boolean;
+}
+
+const GATEWAY_DIGIT_VALUES = [1, 9, 2, 1, 6, 8, 0, 0, 0, 0, 0, 1] as const;
+const GATEWAY_SEPARATOR_AFTER = new Set([2, 5, 8]);
+const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
+const WRONG_GATEWAY_DIGIT_LAYOUT = [
+  [720, 250],
+  [778, 250],
+  [836, 250],
+  [980, 250],
+  [1038, 250],
+  [1096, 250],
+  [1240, 250],
+  [1298, 250],
+  [1356, 250],
+  [1510, 250],
+  [1568, 250],
+  [1626, 250],
+] as const;
+const LIMITED_DOUBLE_JUMP_CHAPTER_COUNT = 2;
+const MAX_LIMITED_JUMPS = 2;
+const SECOND_JUMP_HEIGHT_RATIO = 0.65;
+const SECOND_JUMP_SPEED_MULTIPLIER = Math.sqrt(SECOND_JUMP_HEIGHT_RATIO);
+
 export class GameplayScene extends Phaser.Scene {
   private controller!: GameController;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -57,6 +88,11 @@ export class GameplayScene extends Phaser.Scene {
   private collectibles?: Phaser.Physics.Arcade.StaticGroup;
   private hazards?: Phaser.Physics.Arcade.StaticGroup;
   private projectiles?: Phaser.Physics.Arcade.Group;
+  private gatewayDigitBlocks?: Phaser.Physics.Arcade.StaticGroup;
+  private gatewayDigitCells: GatewayDigitCell[] = [];
+  private gatewayAddressLabel?: Phaser.GameObjects.Text;
+  private gatewayExitStatusText?: Phaser.GameObjects.Text;
+  private gatewayExitHalo?: Phaser.GameObjects.Rectangle;
   private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private bossHp = 0;
   private bossMaxHp = 0;
@@ -69,6 +105,7 @@ export class GameplayScene extends Phaser.Scene {
   private playerPetTextureKey?: string;
   private currentWorldWidth = 2400;
   private currentWorldHeight = 900;
+  private limitedJumpCount = 0;
   private isCursorCaughtSequencePlaying = false;
   private isRecycleCutscenePlaying = false;
   private recycleCutsceneObjects: Phaser.GameObjects.GameObject[] = [];
@@ -95,6 +132,7 @@ export class GameplayScene extends Phaser.Scene {
     window.addEventListener(UI_EVENTS.CHOOSE_ENDING, this.handleChooseEnding as EventListener);
     window.addEventListener(UI_EVENTS.SAVE_RUN, this.handleSaveRun as EventListener);
     window.addEventListener(UI_EVENTS.TOGGLE_GM_FEATURE, this.handleToggleGmFeature as EventListener);
+    window.addEventListener(UI_EVENTS.SELECT_GM_CHAPTER, this.handleSelectGmChapter as EventListener);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener(UI_EVENTS.START_RUN, this.handleStartRun as EventListener);
@@ -104,6 +142,7 @@ export class GameplayScene extends Phaser.Scene {
       window.removeEventListener(UI_EVENTS.CHOOSE_ENDING, this.handleChooseEnding as EventListener);
       window.removeEventListener(UI_EVENTS.SAVE_RUN, this.handleSaveRun as EventListener);
       window.removeEventListener(UI_EVENTS.TOGGLE_GM_FEATURE, this.handleToggleGmFeature as EventListener);
+      window.removeEventListener(UI_EVENTS.SELECT_GM_CHAPTER, this.handleSelectGmChapter as EventListener);
     });
 
     this.rebuildChapter();
@@ -202,6 +241,13 @@ export class GameplayScene extends Phaser.Scene {
     this.gmFeatures[feature] = enabled;
   };
 
+  private readonly handleSelectGmChapter = (event: Event): void => {
+    const { chapterId } = (event as CustomEvent<SelectGmChapterDetail>).detail;
+    this.controller.selectChapterForGm(chapterId);
+    this.rebuildChapter();
+    this.emitState();
+  };
+
   private togglePause(): void {
     if (this.controller.status === "running" || this.controller.status === "paused") {
       this.controller.togglePause();
@@ -237,6 +283,8 @@ export class GameplayScene extends Phaser.Scene {
 
     if (chapter.id === "cursor-hunt") {
       this.drawCursorHuntBackdrop();
+    } else if (chapter.id === "wrong-gateway") {
+      this.drawWrongGatewayBackdrop();
     } else {
       this.add
         .tileSprite(
@@ -255,8 +303,10 @@ export class GameplayScene extends Phaser.Scene {
     this.collectibles = this.physics.add.staticGroup();
     this.hazards = this.physics.add.staticGroup();
     this.projectiles = this.physics.add.group({ allowGravity: false });
+    this.gatewayDigitBlocks = this.physics.add.staticGroup();
 
     this.createPlatforms(tileKey);
+    this.createGatewayDigitPuzzle();
     this.createPlayer();
     this.createCollectibles();
     this.createExit();
@@ -292,12 +342,18 @@ export class GameplayScene extends Phaser.Scene {
     this.cursorJumpFromY = 0;
     this.cursorJumpToX = 0;
     this.cursorJumpToY = 0;
+    this.limitedJumpCount = 0;
     this.isCursorCaughtSequencePlaying = false;
     this.bossSprite = undefined;
     this.bossLabel = undefined;
     this.bossHpBack = undefined;
     this.bossHpFill = undefined;
     this.exitSprite = undefined;
+    this.gatewayDigitBlocks = undefined;
+    this.gatewayDigitCells = [];
+    this.gatewayAddressLabel = undefined;
+    this.gatewayExitStatusText = undefined;
+    this.gatewayExitHalo = undefined;
     this.bossHp = 0;
     this.bossMaxHp = 0;
     this.nextBossAttackAt = 0;
@@ -357,8 +413,66 @@ export class GameplayScene extends Phaser.Scene {
       .setDepth(6);
   }
 
+  private drawWrongGatewayBackdrop(): void {
+    this.add
+      .image(0, 0, "wrong-gateway-bg")
+      .setOrigin(0)
+      .setDisplaySize(this.currentWorldWidth, this.currentWorldHeight)
+      .setDepth(-20);
+    this.drawWrongGatewayExtractedLayer();
+  }
+
+  private drawWrongGatewayExtractedLayer(): void {
+    const place = (key: string, x: number, y: number, width: number, height: number, depth: number): void => {
+      this.add
+        .image(x, y, key)
+        .setOrigin(0)
+        .setDisplaySize(width, height)
+        .setDepth(depth);
+    };
+
+    const placeFloor = (x: number, y: number, width: number): void => {
+      place("wrong-gateway-floor", x, y, width, 32, 4);
+    };
+    const placeShort = (x: number, y: number): void => {
+      place("wrong-gateway-platform-short", x, y, 150, 34, 5);
+    };
+    const placeLong = (x: number, y: number, width = 310): void => {
+      place("wrong-gateway-platform-long", x, y, width, 34, 5);
+    };
+    const placeHanging = (x: number, y: number, width = 150): void => {
+      place("wrong-gateway-platform-hanging", x, y, width, 30, 5);
+    };
+
+    placeFloor(0, 980, 820);
+    placeFloor(880, 980, 560);
+    placeFloor(1580, 980, 520);
+    placeFloor(2260, 980, 620);
+
+    placeShort(60, 888);
+    placeShort(330, 802);
+    placeLong(540, 712, 260);
+    placeLong(830, 618, 290);
+    placeShort(1095, 524);
+    placeShort(1320, 432);
+
+    placeLong(620, 338, 590);
+    placeLong(1210, 338, 520);
+    placeHanging(1840, 486, 280);
+    placeHanging(2110, 636, 280);
+    placeLong(2320, 860, 590);
+
+    place("wrong-gateway-ladder", 312, 820, 72, 170, 5);
+    place("wrong-gateway-ladder", 1185, 538, 72, 300, 5);
+    place("wrong-gateway-ladder", 2300, 812, 72, 176, 5);
+    place("wrong-gateway-portal", 2458, 704, 300, 276, 6);
+  }
+
   private drawChapterTitle(): void {
     const chapter = this.controller.currentChapter();
+    if (chapter.id === "wrong-gateway") {
+      return;
+    }
     this.add
       .text(38, 34, chapter.title, {
         color: "#d9f7ff",
@@ -379,13 +493,183 @@ export class GameplayScene extends Phaser.Scene {
       const platform =
         chapter.id === "cursor-hunt"
           ? this.add.rectangle(x, y, width, height, 0x9edbff, 0.06).setOrigin(0.5)
+          : chapter.id === "wrong-gateway"
+            ? this.add.rectangle(x, y, width, height, 0xffffff, 0).setOrigin(0.5)
           : this.add.tileSprite(x, y, width, height, tileKey).setOrigin(0.5);
       this.physics.add.existing(platform, true);
       const body = platform.body as Phaser.Physics.Arcade.StaticBody;
       body.setSize(width, height);
       body.updateFromGameObject();
+      if (chapter.id === "cursor-hunt") {
+        body.checkCollision.down = false;
+        body.checkCollision.left = false;
+        body.checkCollision.right = false;
+      }
       this.platforms!.add(platform);
     }
+  }
+
+  private createGatewayDigitPuzzle(): void {
+    const chapter = this.controller.currentChapter();
+    if (chapter.id !== "wrong-gateway" || !this.gatewayDigitBlocks) {
+      return;
+    }
+
+    const hasSavedChange = this.hasWrongGatewayDigitChanged();
+    const blockWidth = 52;
+    const blockHeight = 42;
+
+    this.gatewayDigitCells = [];
+    GATEWAY_DIGIT_VALUES.forEach((initialValue, digitIndex) => {
+      const [x, y] = WRONG_GATEWAY_DIGIT_LAYOUT[digitIndex];
+      const value = hasSavedChange && digitIndex === 0 ? (initialValue + 1) % 10 : initialValue;
+      const changed = hasSavedChange && digitIndex === 0;
+      const frame = this.add
+        .image(x, y, "wrong-gateway-digit-base")
+        .setDisplaySize(blockWidth, blockHeight)
+        .setDepth(16);
+      if (changed) {
+        frame.setTint(0xffd76a);
+      }
+
+      const block = this.add.rectangle(x, y, blockWidth, blockHeight, 0xffffff, 0).setDepth(15);
+      this.physics.add.existing(block, true);
+      const body = block.body as Phaser.Physics.Arcade.StaticBody;
+      body.setSize(blockWidth - 8, blockHeight - 6);
+      body.updateFromGameObject();
+      this.gatewayDigitBlocks!.add(block);
+
+      const label = this.add
+        .text(x, y - 1, String(value), {
+          color: changed ? "#1b1200" : "#e6fffb",
+          fontFamily: "Consolas, 'Microsoft YaHei UI', monospace",
+          fontSize: "28px",
+          fontStyle: "bold",
+          stroke: changed ? "#fff1a6" : "#04242a",
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setDepth(17);
+
+      const cell: GatewayDigitCell = { block, frame, label, value, changed };
+      block.setData("gatewayDigitCell", cell);
+      this.gatewayDigitCells.push(cell);
+
+      if (GATEWAY_SEPARATOR_AFTER.has(digitIndex)) {
+        const next = WRONG_GATEWAY_DIGIT_LAYOUT[digitIndex + 1];
+        const separatorX = next ? (x + next[0]) / 2 : x + 88;
+        this.createGatewaySeparator(separatorX, y);
+      }
+    });
+
+    this.gatewayAddressLabel = this.add
+      .text(0, 0, this.formatGatewayAddress(), {
+        color: "#bffef5",
+        fontFamily: "Consolas, monospace",
+        fontSize: "16px",
+        fontStyle: "bold",
+        stroke: "#031116",
+        strokeThickness: 3,
+      })
+      .setDepth(18)
+      .setVisible(false);
+    this.gatewayExitStatusText = this.add
+      .text(0, 0, "", {
+        color: "#ffd76a",
+        fontFamily: "Microsoft YaHei UI, sans-serif",
+        fontSize: "15px",
+        fontStyle: "bold",
+        stroke: "#08040a",
+        strokeThickness: 4,
+      })
+      .setDepth(20)
+      .setVisible(false);
+    this.gatewayExitHalo = this.add.rectangle(2608, 830, 110, 150, 0xff4f73, 0).setDepth(7).setVisible(false);
+    this.refreshGatewayExitState();
+  }
+
+  private createGatewaySeparator(x: number, y: number): void {
+    this.add
+      .image(x, y, "wrong-gateway-separator")
+      .setDisplaySize(32, 31)
+      .setDepth(16);
+  }
+
+  private handleGatewayDigitCollision(block: Phaser.GameObjects.GameObject): void {
+    if (!this.player || this.controller.currentChapter().id !== "wrong-gateway") {
+      return;
+    }
+
+    const cell = block.getData("gatewayDigitCell") as GatewayDigitCell | undefined;
+    if (!cell) {
+      return;
+    }
+
+    const lastHitAt = cell.block.getData("lastHitAt") as number | undefined;
+    if (lastHitAt && this.time.now - lastHitAt < 180) {
+      return;
+    }
+
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+    const playerIsBelowBlock = this.player.y > cell.block.y + 28;
+    const isHeadHit = playerIsBelowBlock && (playerBody.touching.up || playerBody.blocked.up || playerBody.velocity.y <= 80);
+    if (!isHeadHit) {
+      return;
+    }
+
+    cell.block.setData("lastHitAt", this.time.now);
+    this.bumpGatewayDigit(cell);
+    playerBody.setVelocityY(150);
+  }
+
+  private bumpGatewayDigit(cell: GatewayDigitCell): void {
+    cell.value = (cell.value + Phaser.Math.Between(1, 9)) % 10;
+    cell.changed = true;
+    cell.label.setText(String(cell.value));
+    cell.label.setColor("#1b1200");
+    cell.label.setStroke("#fff1a6", 4);
+    cell.frame.setTint(0xffd76a);
+    this.controller.state.flags[WRONG_GATEWAY_CHANGED_FLAG] = true;
+    this.gatewayAddressLabel?.setText(this.formatGatewayAddress());
+    this.controller.note(`地址位变动为 ${this.formatGatewayAddress()}，错误网关开始响应。`, true);
+    this.refreshGatewayExitState();
+    this.emitState();
+
+    this.tweens.add({
+      targets: [cell.frame, cell.label],
+      y: "-=12",
+      yoyo: true,
+      duration: 80,
+      ease: "Quad.easeOut",
+    });
+    this.cameras.main.shake(55, 0.002);
+  }
+
+  private formatGatewayAddress(): string {
+    const digits = this.gatewayDigitCells.map((cell) => cell.value);
+    const groups = [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9), digits.slice(9, 12)];
+    return groups.map((group) => group.join("")).join("◆");
+  }
+
+  private hasWrongGatewayDigitChanged(): boolean {
+    return Boolean(this.controller.state.flags[WRONG_GATEWAY_CHANGED_FLAG]);
+  }
+
+  private canUseExit(): boolean {
+    const chapter = this.controller.currentChapter();
+    return this.controller.canExitChapter() && (chapter.id !== "wrong-gateway" || this.hasWrongGatewayDigitChanged());
+  }
+
+  private refreshGatewayExitState(): void {
+    if (this.controller.currentChapter().id !== "wrong-gateway") {
+      return;
+    }
+
+    const isOpen = this.canUseExit();
+    this.exitSprite?.setTint(isOpen ? 0xffd76a : 0x334050);
+    this.gatewayExitStatusText?.setText(isOpen ? "错误网关已响应" : "地址未扰动");
+    this.gatewayExitStatusText?.setColor(isOpen ? "#fff1a6" : "#91a8b6");
+    this.gatewayExitHalo?.setFillStyle(isOpen ? 0xff4f73 : 0x334050, isOpen ? 0.18 : 0.05);
   }
 
   private createPlayer(): void {
@@ -393,13 +677,15 @@ export class GameplayScene extends Phaser.Scene {
     const shouldUseAnimalPet = isAnimalPetChapter(chapter.id);
     const texture = shouldUseAnimalPet ? getPetTextureKey(this.controller.state.customization.petSpecies) : "player-code";
     this.playerPetTextureKey = shouldUseAnimalPet ? texture : undefined;
-    const startPosition = chapter.id === "cursor-hunt" ? { x: 95, y: 835 } : { x: 96, y: 700 };
+    const startPosition =
+      chapter.id === "cursor-hunt" ? { x: 95, y: 835 } : chapter.id === "wrong-gateway" ? { x: 42, y: 948 } : { x: 96, y: 700 };
     this.player = this.physics.add.sprite(startPosition.x, startPosition.y, texture);
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(15);
     this.player.setDragX(1100);
     this.player.setMaxVelocity(420, 720);
     this.player.setData("lastDamageAt", 0);
+    this.limitedJumpCount = 0;
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     body.setSize(shouldUseAnimalPet ? 22 : 24, shouldUseAnimalPet ? 28 : 18);
@@ -434,15 +720,31 @@ export class GameplayScene extends Phaser.Scene {
 
   private createExit(): void {
     const chapter = this.controller.currentChapter();
-    const exitPosition = chapter.id === "cursor-hunt" ? { x: 1468, y: 838 } : { x: 2260, y: 790 };
+    const exitPosition =
+      chapter.id === "cursor-hunt"
+        ? { x: 1468, y: 838 }
+        : chapter.id === "wrong-gateway"
+          ? { x: 2610, y: 830 }
+          : { x: 2260, y: 790 };
     this.exitSprite = this.physics.add.staticSprite(exitPosition.x, exitPosition.y, "exit-node");
-    this.exitSprite.setTint(this.controller.canExitChapter() ? chapter.palette.accent : 0x334050);
+    this.exitSprite.setTint(this.canUseExit() ? chapter.palette.accent : 0x334050);
     this.exitSprite.setDepth(9);
+    if (chapter.id === "wrong-gateway") {
+      this.exitSprite.setVisible(false);
+      const body = this.exitSprite.body as Phaser.Physics.Arcade.StaticBody;
+      body.setSize(92, 122);
+      body.updateFromGameObject();
+    }
 
-    const labelPosition = chapter.id === "cursor-hunt" ? { x: 1402, y: 775 } : { x: 2210, y: 725 };
-    this.add
+    const labelPosition =
+      chapter.id === "cursor-hunt"
+        ? { x: 1402, y: 775 }
+        : chapter.id === "wrong-gateway"
+          ? { x: 2530, y: 952 }
+          : { x: 2210, y: 725 };
+    const exitLabel = this.add
       .text(labelPosition.x, labelPosition.y, chapter.exitLabel, {
-        color: chapter.id === "cursor-hunt" ? "#ffd99f" : "#dffcff",
+        color: chapter.id === "cursor-hunt" || chapter.id === "wrong-gateway" ? "#ffd99f" : "#dffcff",
         fontFamily: "Microsoft YaHei UI, monospace",
         fontSize: chapter.id === "cursor-hunt" ? "13px" : "14px",
         stroke: "#071019",
@@ -450,6 +752,10 @@ export class GameplayScene extends Phaser.Scene {
       })
       .setAlpha(chapter.id === "cursor-hunt" ? 0.74 : 1)
       .setDepth(18);
+    if (chapter.id === "wrong-gateway") {
+      exitLabel.setVisible(false);
+    }
+    this.refreshGatewayExitState();
   }
 
   private createBoss(): void {
@@ -567,6 +873,13 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     this.colliders.push(this.physics.add.collider(this.player, this.platforms));
+    if (this.gatewayDigitBlocks) {
+      this.colliders.push(
+        this.physics.add.collider(this.player, this.gatewayDigitBlocks, (_player, block) => {
+          this.handleGatewayDigitCollision(block as Phaser.GameObjects.GameObject);
+        }),
+      );
+    }
     this.colliders.push(
       this.physics.add.overlap(this.player, this.collectibles, (_player, item) => {
         item.destroy();
@@ -590,7 +903,12 @@ export class GameplayScene extends Phaser.Scene {
       this.physics.add.overlap(this.player, this.exitSprite!, () => {
         if (this.time.now - this.lastAutoExitAt > 1100 && this.time.now > this.exitCooldownUntil) {
           this.lastAutoExitAt = this.time.now;
-          this.advanceChapter(false);
+          if (this.canUseExit()) {
+            this.advanceChapter(false);
+          } else {
+            this.controller.note("错误网关仍未响应，必须先顶撞并改变任意地址数字。");
+            this.emitState();
+          }
         }
       }),
     );
@@ -831,12 +1149,59 @@ export class GameplayScene extends Phaser.Scene {
       this.player.setVelocityY(60);
     }
 
-    if (
-      wantsJump &&
-      (this.gmFeatures.infiniteJump || body.blocked.down || canWallCling || this.controller.currentChapter().index < 4)
-    ) {
+    const isGrounded = body.blocked.down || body.touching.down;
+    const usesLimitedDoubleJump = this.controller.currentChapter().index <= LIMITED_DOUBLE_JUMP_CHAPTER_COUNT;
+    if (usesLimitedDoubleJump) {
+      this.syncLimitedDoubleJumpState(isGrounded);
+    }
+
+    if (!wantsJump) {
+      return;
+    }
+
+    if (this.gmFeatures.infiniteJump) {
+      this.player.setVelocityY(-JUMP_SPEED);
+      return;
+    }
+
+    if (usesLimitedDoubleJump) {
+      this.tryLimitedDoubleJump(isGrounded);
+      return;
+    }
+
+    if (body.blocked.down || body.touching.down || canWallCling) {
       this.player.setVelocityY(canWallCling ? -JUMP_SPEED * 0.92 : -JUMP_SPEED);
     }
+  }
+
+  private syncLimitedDoubleJumpState(isGrounded: boolean): void {
+    if (isGrounded) {
+      this.limitedJumpCount = 0;
+      return;
+    }
+
+    if (this.limitedJumpCount === 0) {
+      this.limitedJumpCount = 1;
+    }
+  }
+
+  private tryLimitedDoubleJump(isGrounded: boolean): void {
+    if (!this.player) {
+      return;
+    }
+
+    if (isGrounded) {
+      this.limitedJumpCount = 1;
+      this.player.setVelocityY(-JUMP_SPEED);
+      return;
+    }
+
+    if (this.limitedJumpCount >= MAX_LIMITED_JUMPS) {
+      return;
+    }
+
+    this.limitedJumpCount += 1;
+    this.player.setVelocityY(-JUMP_SPEED * SECOND_JUMP_SPEED_MULTIPLIER);
   }
 
   private updateAbilityInput(time: number): void {
@@ -922,7 +1287,12 @@ export class GameplayScene extends Phaser.Scene {
 
   private useCloneOrExit(time: number): void {
     if (this.exitSprite && this.player && Phaser.Math.Distance.BetweenPoints(this.player, this.exitSprite) < 110) {
-      this.advanceChapter(false);
+      if (this.canUseExit()) {
+        this.advanceChapter(false);
+      } else {
+        this.controller.note("错误网关仍未响应，必须先顶撞并改变任意地址数字。");
+        this.emitState();
+      }
       return;
     }
 
@@ -1058,15 +1428,24 @@ export class GameplayScene extends Phaser.Scene {
     this.cameras.main.shake(90, 0.004);
     if (respawned) {
       const chapter = this.controller.currentChapter();
-      const respawnPosition = chapter.id === "cursor-hunt" ? { x: 95, y: 835 } : { x: 96, y: 700 };
+      const respawnPosition =
+        chapter.id === "cursor-hunt" ? { x: 95, y: 835 } : chapter.id === "wrong-gateway" ? { x: 42, y: 948 } : { x: 96, y: 700 };
       this.player.setPosition(respawnPosition.x, respawnPosition.y);
       this.player.setVelocity(0, 0);
+      this.limitedJumpCount = 0;
     }
     this.emitState();
   }
 
   private advanceChapter(debug: boolean): void {
     if (this.isRecycleCutscenePlaying) {
+      return;
+    }
+    if (!debug && !this.canUseExit()) {
+      if (this.controller.currentChapter().id === "wrong-gateway") {
+        this.controller.note("错误网关仍未响应，必须先顶撞并改变任意地址数字。");
+        this.emitState();
+      }
       return;
     }
     if (debug && this.controller.currentBoss()) {
@@ -1326,8 +1705,9 @@ export class GameplayScene extends Phaser.Scene {
     if (time < this.pingUntil && this.exitSprite) {
       this.exitSprite.setTint(0xffffff);
     } else if (this.exitSprite) {
-      this.exitSprite.setTint(this.controller.canExitChapter() ? this.controller.currentChapter().palette.accent : 0x334050);
+      this.exitSprite.setTint(this.canUseExit() ? this.controller.currentChapter().palette.accent : 0x334050);
     }
+    this.refreshGatewayExitState();
   }
 
   private updatePlayerAnimation(): void {
@@ -1357,7 +1737,7 @@ export class GameplayScene extends Phaser.Scene {
     if (!this.exitSprite) {
       return;
     }
-    const scale = this.controller.canExitChapter() ? 1 + Math.sin(time / 180) * 0.08 : 0.9;
+    const scale = this.canUseExit() ? 1 + Math.sin(time / 180) * 0.08 : 0.9;
     this.exitSprite.setScale(scale);
   }
 

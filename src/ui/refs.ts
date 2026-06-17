@@ -22,6 +22,7 @@ export interface DomUiRefs {
   achievementsBody: HTMLElement;
   coverToast: HTMLElement;
   continueButton: HTMLButtonElement;
+  gmChapterSelect: HTMLSelectElement;
   createPetPromptLead: HTMLElement;
   createPetPromptTrail: HTMLElement;
   createPetSendButton: HTMLButtonElement;
@@ -69,6 +70,7 @@ export function collectDomUiRefs(root: HTMLElement): DomUiRefs {
     achievementsBody: queryRequired<HTMLElement>(root, '[data-ref="achievementsBody"]'),
     coverToast: queryRequired<HTMLElement>(root, '[data-ref="coverToast"]'),
     continueButton: queryRequired<HTMLButtonElement>(root, '[data-action="continue"]'),
+    gmChapterSelect: queryRequired<HTMLSelectElement>(root, '[data-ref="gmChapterSelect"]'),
     createPetPromptLead: queryRequired<HTMLElement>(root, '[data-ref="createPetPromptLead"]'),
     createPetPromptTrail: queryRequired<HTMLElement>(root, '[data-ref="createPetPromptTrail"]'),
     createPetSendButton: queryRequired<HTMLButtonElement>(root, '[data-action="create-pet-send"]'),

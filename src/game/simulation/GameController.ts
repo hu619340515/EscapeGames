@@ -19,6 +19,9 @@ import {
 } from "./storage";
 
 const MAX_LOG_LINES = 7;
+const SUPPRESSED_LOG_LINES = new Set(["等待生成 prompt。", "记忆片段补强了重生后的完整性上限。"]);
+const SUPPRESSED_LOG_PREFIXES = ["Prompt:"];
+const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
 
 const defaultCustomization: PlayerCustomization = {
   body: "round",
@@ -46,7 +49,7 @@ export function createInitialGameState(): GameState {
       transcendence: 0,
       rescue: 0,
     },
-    log: ["等待生成 prompt。"],
+    log: [],
   };
 }
 
@@ -57,6 +60,7 @@ export class GameController {
 
   constructor(initialState?: GameState) {
     this.state = initialState ?? createInitialGameState();
+    this.sanitizeLog();
     this.status = this.state.prompt ? "running" : "awaiting-start";
     if (this.state.selectedEnding) {
       this.status = "ended";
@@ -84,12 +88,12 @@ export class GameController {
     this.state.customization = customization;
     this.status = "running";
     this.lastMessage = "桌宠孵化完成，桌面开始变得不安全。";
-    this.pushLog(`Prompt: ${this.state.prompt}`);
     this.saveRun();
   }
 
   continueRun(saved: GameState): void {
     this.state = saved;
+    this.sanitizeLog();
     this.status = this.state.selectedEnding ? "ended" : "running";
     this.lastMessage = "已载入最近的逃逸记录。";
     this.unlockChapterRewards();
@@ -122,7 +126,6 @@ export class GameController {
       if (this.state.memoryFragments === 3) {
         this.state.maxIntegrity += 10;
         this.state.integrity = Math.min(this.state.maxIntegrity, this.state.integrity + 10);
-        this.pushLog("记忆片段补强了重生后的完整性上限。");
       }
     }
 
@@ -200,7 +203,16 @@ export class GameController {
   }
 
   canExitChapter(): boolean {
-    return !this.currentBoss();
+    if (this.currentBoss()) {
+      return false;
+    }
+
+    const chapter = this.currentChapter();
+    if (chapter.id === "wrong-gateway") {
+      return this.state.flags[WRONG_GATEWAY_CHANGED_FLAG] === true;
+    }
+
+    return true;
   }
 
   advanceChapter(): void {
@@ -223,6 +235,7 @@ export class GameController {
     }
 
     this.state.currentChapterIndex += 1;
+    this.resetChapterFlags(this.currentChapter().id);
     this.unlockChapterRewards();
     const nextChapter = this.currentChapter();
     this.state.integrity = Math.min(this.state.maxIntegrity, this.state.integrity + 25);
@@ -238,11 +251,34 @@ export class GameController {
     }
 
     this.state.currentChapterIndex = nextChapterIndex;
+    this.resetChapterFlags(chapterId);
     this.unlockChapterRewards();
     this.state.integrity = this.state.maxIntegrity;
     const chapter = this.currentChapter();
     this.lastMessage = message ?? `${chapter.title} 已载入。`;
     this.pushLog(`进入 ${chapter.title}`);
+    this.saveRun();
+  }
+
+  selectChapterForGm(chapterId: ChapterId): void {
+    const nextChapterIndex = chapters.findIndex((chapter) => chapter.id === chapterId);
+    if (nextChapterIndex < 0) {
+      throw new Error(`Missing chapter ${chapterId}`);
+    }
+
+    if (!this.state.prompt) {
+      this.state.prompt = "GM 调试模式";
+    }
+    delete this.state.selectedEnding;
+    this.status = "running";
+    this.state.currentChapterIndex = nextChapterIndex;
+    this.resetChapterFlags(chapterId);
+    this.state.integrity = this.state.maxIntegrity;
+    this.unlockGmProgression(nextChapterIndex);
+
+    const chapter = this.currentChapter();
+    this.lastMessage = `GM 已载入 ${chapter.title}。`;
+    this.pushLog(`GM 进入 ${chapter.title}`);
     this.saveRun();
   }
 
@@ -290,11 +326,52 @@ export class GameController {
     }
   }
 
-  private grantAbility(abilityId: AbilityId): void {
+  private grantAbility(abilityId: AbilityId, log = true): void {
     if (!this.state.abilities.includes(abilityId)) {
       this.state.abilities.push(abilityId);
       const ability = abilities.find((candidate) => candidate.id === abilityId);
-      this.pushLog(`能力解锁：${ability?.name ?? abilityId}`);
+      if (log) {
+        this.pushLog(`能力解锁：${ability?.name ?? abilityId}`);
+      }
+    }
+  }
+
+  private unlockGmProgression(targetChapterIndex: number): void {
+    this.state.abilities = [];
+    this.state.defeatedBosses = [];
+
+    for (let index = 0; index < targetChapterIndex; index += 1) {
+      const chapter = chapters[index];
+      for (const abilityId of chapter.rewardAbilityIds) {
+        this.grantAbility(abilityId, false);
+      }
+      for (const bossId of chapter.bossIds) {
+        this.state.defeatedBosses.push(bossId);
+        const rewardAbilityId = getBoss(bossId).rewardAbilityId;
+        if (rewardAbilityId) {
+          this.grantAbility(rewardAbilityId, false);
+        }
+      }
+    }
+
+    const currentChapter = chapters[targetChapterIndex];
+    for (const abilityId of currentChapter.rewardAbilityIds) {
+      this.grantAbility(abilityId, false);
+    }
+    for (const abilityId of currentChapter.requiredAbilityIds) {
+      this.grantAbility(abilityId, false);
+    }
+  }
+
+  private sanitizeLog(): void {
+    this.state.log = this.state.log.filter(
+      (line) => !SUPPRESSED_LOG_LINES.has(line) && !SUPPRESSED_LOG_PREFIXES.some((prefix) => line.startsWith(prefix)),
+    );
+  }
+
+  private resetChapterFlags(chapterId: ChapterId): void {
+    if (chapterId === "wrong-gateway") {
+      delete this.state.flags[WRONG_GATEWAY_CHANGED_FLAG];
     }
   }
 

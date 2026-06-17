@@ -1,5 +1,14 @@
 import Phaser from "phaser";
 import cursorHuntDesktopUrl from "../../assets/chapter1/cursor-hunt-desktop.png";
+import wrongGatewayBackgroundUrl from "../../../素材/第二章/背景/wrong-gateway-background-large.png";
+import wrongGatewayDigitBaseUrl from "../../../素材/第二章/数字模块/wrong-gateway-digit-base.png";
+import wrongGatewayFloorUrl from "../../../素材/第二章/地面/wrong-gateway-floor.png";
+import wrongGatewayLadderUrl from "../../../素材/第二章/楼梯/wrong-gateway-ladder.png";
+import wrongGatewayPlatformHangingUrl from "../../../素材/第二章/平台/wrong-gateway-platform-hanging.png";
+import wrongGatewayPlatformLongUrl from "../../../素材/第二章/平台/wrong-gateway-platform-long.png";
+import wrongGatewayPlatformShortUrl from "../../../素材/第二章/平台/wrong-gateway-platform-short.png";
+import wrongGatewayPortalUrl from "../../../素材/第二章/网关/wrong-gateway-portal.png";
+import wrongGatewaySeparatorUrl from "../../../素材/第二章/数字模块/wrong-gateway-separator.png";
 import recycleMouthUrl from "../../../素材/回收站/recycle_monster_mouth.png";
 import catSpritesheetUrl from "../../../素材/第一章/cat_spritesheet_run6_image2.png";
 import pandaSpritesheetUrl from "../../../素材/第一章/panda_spritesheet_run6_image2.png";
@@ -20,6 +29,15 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image("cursor-hunt-desktop-bg", cursorHuntDesktopUrl);
+    this.load.image("wrong-gateway-bg", wrongGatewayBackgroundUrl);
+    this.load.image("wrong-gateway-floor", wrongGatewayFloorUrl);
+    this.load.image("wrong-gateway-platform-short", wrongGatewayPlatformShortUrl);
+    this.load.image("wrong-gateway-platform-long", wrongGatewayPlatformLongUrl);
+    this.load.image("wrong-gateway-platform-hanging", wrongGatewayPlatformHangingUrl);
+    this.load.image("wrong-gateway-ladder", wrongGatewayLadderUrl);
+    this.load.image("wrong-gateway-digit-base", wrongGatewayDigitBaseUrl);
+    this.load.image("wrong-gateway-separator", wrongGatewaySeparatorUrl);
+    this.load.image("wrong-gateway-portal", wrongGatewayPortalUrl);
     this.load.image("recycle-mouth", recycleMouthUrl);
     this.load.spritesheet(PET_SPRITE_TEXTURE_KEYS.pig, pigSpritesheetUrl, {
       frameWidth: PET_SPRITE_FRAME_WIDTH,

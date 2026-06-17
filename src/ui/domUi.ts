@@ -1,4 +1,4 @@
-import type { EndingId } from "../game/types";
+import type { ChapterId, EndingId } from "../game/types";
 import { createCoverAnimation } from "./coverAnimation";
 import { createCoverController } from "./coverController";
 import { createCoverMusicController } from "./coverMusic";
@@ -43,6 +43,9 @@ export function createDomUi(root: HTMLElement): void {
   root.querySelector('[data-action="reset"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
   root.querySelector('[data-action="reset-ending"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
   root.querySelector('[data-action="gm-reset"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
+  refs.gmChapterSelect.addEventListener("change", () => {
+    dispatchUiEvent(UI_EVENTS.SELECT_GM_CHAPTER, { chapterId: refs.gmChapterSelect.value as ChapterId });
+  });
   root.querySelectorAll<HTMLButtonElement>('[data-action="gm-toggle"]').forEach((button) => {
     button.addEventListener("click", () => {
       const enabled = button.getAttribute("aria-pressed") !== "true";
@@ -97,6 +100,7 @@ export function createDomUi(root: HTMLElement): void {
     }
 
     renderHudAndEnding(payload, refs);
+    refs.gmChapterSelect.value = payload.chapter.id;
   });
 
   coverController.refreshContinueState();

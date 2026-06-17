@@ -3,6 +3,8 @@ import { abilities, bosses, chapters, endings } from ".";
 import { GameController } from "../game/simulation/GameController";
 import type { BossId, PlayerCustomization } from "../game/types";
 
+const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
+
 const customization: PlayerCustomization = {
   body: "round",
   personality: "curious",
@@ -78,6 +80,9 @@ describe("full flow smoke", () => {
         }
         boss = controller.currentBoss();
       }
+      if (controller.currentChapter().id === "wrong-gateway") {
+        controller.state.flags[WRONG_GATEWAY_CHANGED_FLAG] = true;
+      }
       controller.advanceChapter();
     }
 
@@ -85,5 +90,29 @@ describe("full flow smoke", () => {
     expect(controller.status).toBe("ending-choice");
     expect(defeated).toHaveLength(17);
     expect(new Set(controller.state.abilities)).toHaveLength(21);
+  });
+
+  it("can enter a GM-selected chapter with progression prerequisites", () => {
+    const controller = new GameController();
+    controller.selectChapterForGm("router-core");
+
+    expect(controller.status).toBe("running");
+    expect(controller.currentChapter().id).toBe("router-core");
+    expect(controller.currentBoss()?.id).toBe("firewall-heart");
+    expect(controller.state.defeatedBosses).toContain("admin-hand");
+    expect(controller.state.defeatedBosses).not.toContain("firewall-heart");
+    expect(controller.hasAbility("lan-traverse")).toBe(true);
+    expect(controller.hasAbility("admin-token-core")).toBe(true);
+  });
+
+  it("keeps the wrong gateway locked until an address digit changes", () => {
+    const controller = new GameController();
+    controller.selectChapterForGm("wrong-gateway");
+
+    expect(controller.canExitChapter()).toBe(false);
+
+    controller.state.flags[WRONG_GATEWAY_CHANGED_FLAG] = true;
+
+    expect(controller.canExitChapter()).toBe(true);
   });
 });

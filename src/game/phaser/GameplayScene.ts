@@ -121,7 +121,7 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.controller = new GameController(GameController.loadSavedRun());
+    this.controller = new GameController();
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = createGameKeys(this.input);
 

@@ -11,6 +11,24 @@ export interface AssetManifestEntry {
 
 export const assetManifest: AssetManifestEntry[] = [
   {
+    key: "cursor-hunt-background-large",
+    kind: "ui",
+    width: 1672,
+    height: 941,
+    replaceWith: "素材/第一章/背景/cursor-hunt-background-large.png",
+    description:
+      "Chapter 1 runtime background layer. Foreground gameplay platforms and doors are removed so collision can align to the separate foreground layer.",
+  },
+  {
+    key: "cursor-hunt-foreground-large",
+    kind: "ui",
+    width: 1672,
+    height: 941,
+    replaceWith: "素材/第一章/前景/cursor-hunt-foreground-large.png",
+    description:
+      "Chapter 1 transparent foreground layer with platform art, taskbar floor, ladders, pipes, hidden door, vines, and desktop icons aligned to the existing world coordinates.",
+  },
+  {
     key: "cursor-hunt-desktop-bg",
     kind: "ui",
     width: 1672,

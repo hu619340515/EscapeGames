@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import cursorHuntDesktopUrl from "../../assets/chapter1/cursor-hunt-desktop.png";
+import cursorHuntBackgroundUrl from "../../../素材/第一章/背景/cursor-hunt-background-large.png";
+import cursorHuntForegroundUrl from "../../../素材/第一章/前景/cursor-hunt-foreground-large.png";
 import wrongGatewayBackgroundUrl from "../../../素材/第二章/背景/wrong-gateway-background-large.png";
 import wrongGatewayDigitBaseUrl from "../../../素材/第二章/数字模块/wrong-gateway-digit-base.png";
 import wrongGatewayFloorUrl from "../../../素材/第二章/地面/wrong-gateway-floor.png";
@@ -28,7 +29,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image("cursor-hunt-desktop-bg", cursorHuntDesktopUrl);
+    this.load.image("cursor-hunt-background-large", cursorHuntBackgroundUrl);
+    this.load.image("cursor-hunt-foreground-large", cursorHuntForegroundUrl);
     this.load.image("wrong-gateway-bg", wrongGatewayBackgroundUrl);
     this.load.image("wrong-gateway-floor", wrongGatewayFloorUrl);
     this.load.image("wrong-gateway-platform-short", wrongGatewayPlatformShortUrl);

@@ -61,6 +61,11 @@ const LIMITED_DOUBLE_JUMP_CHAPTER_COUNT = 2;
 const MAX_LIMITED_JUMPS = 2;
 const SECOND_JUMP_HEIGHT_RATIO = 0.65;
 const SECOND_JUMP_SPEED_MULTIPLIER = Math.sqrt(SECOND_JUMP_HEIGHT_RATIO);
+const CURSOR_HUNTER_SIZE_RATIO = 0.6;
+const CURSOR_HUNTER_BODY_WIDTH = Math.round(38 * CURSOR_HUNTER_SIZE_RATIO);
+const CURSOR_HUNTER_BODY_HEIGHT = Math.round(46 * CURSOR_HUNTER_SIZE_RATIO);
+const CURSOR_HUNTER_WARNING_RADIUS = 54 * CURSOR_HUNTER_SIZE_RATIO;
+const CURSOR_HUNTER_LANDING_RADIUS = 44 * CURSOR_HUNTER_SIZE_RATIO;
 
 export class GameplayScene extends Phaser.Scene {
   private controller!: GameController;
@@ -372,14 +377,16 @@ export class GameplayScene extends Phaser.Scene {
 
   private drawCursorHuntBackdrop(): void {
     this.add
-      .image(0, 0, "cursor-hunt-desktop-bg")
+      .image(0, 0, "cursor-hunt-background-large")
       .setOrigin(0)
       .setDisplaySize(this.currentWorldWidth, this.currentWorldHeight)
       .setDepth(-20);
 
-    this.add.rectangle(836, 910, 1672, 72, 0x03070c, 0.34).setDepth(-5);
-    this.add.rectangle(1478, 812, 150, 178, 0x05070d, 0.62).setDepth(-4);
-    this.add.rectangle(1468, 838, 58, 80, 0xffb74d, 0.08).setDepth(-3);
+    this.add
+      .image(0, 0, "cursor-hunt-foreground-large")
+      .setOrigin(0)
+      .setDisplaySize(this.currentWorldWidth, this.currentWorldHeight)
+      .setDepth(-10);
 
     const scan = this.add.rectangle(1412, 260, 520, 4, 0xff2447, 0.42).setDepth(-2);
     this.tweens.add({
@@ -492,7 +499,7 @@ export class GameplayScene extends Phaser.Scene {
     for (const [x, y, width, height] of platformDefs) {
       const platform =
         chapter.id === "cursor-hunt"
-          ? this.add.rectangle(x, y, width, height, 0x9edbff, 0.06).setOrigin(0.5)
+          ? this.add.rectangle(x, y, width, height, 0xffffff, 0).setOrigin(0.5)
           : chapter.id === "wrong-gateway"
             ? this.add.rectangle(x, y, width, height, 0xffffff, 0).setOrigin(0.5)
           : this.add.tileSprite(x, y, width, height, tileKey).setOrigin(0.5);
@@ -839,7 +846,7 @@ export class GameplayScene extends Phaser.Scene {
 
     this.cursorHunter = this.physics.add.sprite(1505, 150, "cursor-hunter");
     this.cursorHunter.setDepth(24);
-    this.cursorHunter.setScale(0.84);
+    this.cursorHunter.setScale(0.84 * CURSOR_HUNTER_SIZE_RATIO);
     this.cursorHunter.setAlpha(0.9);
     this.cursorHunter.setTint(0xff2f50);
     this.cursorHunterStartedAt = this.time.now;
@@ -847,10 +854,11 @@ export class GameplayScene extends Phaser.Scene {
     this.cursorNextJumpAt = this.time.now + 1500;
     const body = this.cursorHunter.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
-    body.setSize(38, 46);
-    body.setOffset(8, 12);
+    body.setSize(CURSOR_HUNTER_BODY_WIDTH, CURSOR_HUNTER_BODY_HEIGHT, true);
 
-    this.cursorWarning = this.add.circle(this.cursorHunter.x, this.cursorHunter.y, 54, 0xff2447, 0.08).setDepth(23);
+    this.cursorWarning = this.add
+      .circle(this.cursorHunter.x, this.cursorHunter.y, CURSOR_HUNTER_WARNING_RADIUS, 0xff2447, 0.08)
+      .setDepth(23);
     this.tweens.add({
       targets: this.cursorWarning,
       scale: { from: 0.65, to: 1.3 },
@@ -861,7 +869,7 @@ export class GameplayScene extends Phaser.Scene {
     });
 
     this.cursorLandingMarker = this.add
-      .circle(this.cursorHunter.x, this.cursorHunter.y, 44, 0xff2447, 0.1)
+      .circle(this.cursorHunter.x, this.cursorHunter.y, CURSOR_HUNTER_LANDING_RADIUS, 0xff2447, 0.1)
       .setStrokeStyle(3, 0xff6b82, 0.9)
       .setDepth(22)
       .setVisible(false);
@@ -979,7 +987,7 @@ export class GameplayScene extends Phaser.Scene {
     this.cursorJumpStartedAt = time;
     this.cursorJumpState = "aiming";
     this.cursorHunter.setVelocity(0, 0);
-    this.cursorHunter.setScale(0.98, 0.7);
+    this.cursorHunter.setScale(0.98 * CURSOR_HUNTER_SIZE_RATIO, 0.7 * CURSOR_HUNTER_SIZE_RATIO);
 
     if (this.cursorLandingMarker) {
       this.cursorLandingMarker
@@ -1011,7 +1019,7 @@ export class GameplayScene extends Phaser.Scene {
       880,
     );
     this.cursorJumpState = "jumping";
-    this.cursorHunter.setScale(0.78, 1.06);
+    this.cursorHunter.setScale(0.78 * CURSOR_HUNTER_SIZE_RATIO, 1.06 * CURSOR_HUNTER_SIZE_RATIO);
   }
 
   private updateCursorJump(time: number): void {
@@ -1031,7 +1039,7 @@ export class GameplayScene extends Phaser.Scene {
     if (progress >= 1) {
       this.cursorJumpState = "recovering";
       this.cursorNextJumpAt = time + 560;
-      this.cursorHunter.setScale(1.02, 0.76);
+      this.cursorHunter.setScale(1.02 * CURSOR_HUNTER_SIZE_RATIO, 0.76 * CURSOR_HUNTER_SIZE_RATIO);
       this.cameras.main.shake(70, 0.0025);
       this.cursorLandingMarker?.setVisible(false);
     }
@@ -1046,14 +1054,20 @@ export class GameplayScene extends Phaser.Scene {
       this.cursorHunter.setRotation(Math.sin(time / 180) * 0.08);
     }
     if (this.cursorJumpState === "watching") {
-      this.cursorHunter.setScale(0.84 + Math.sin(time / 260) * 0.03);
+      this.cursorHunter.setScale((0.84 + Math.sin(time / 260) * 0.03) * CURSOR_HUNTER_SIZE_RATIO);
     }
     if (this.cursorJumpState === "recovering") {
-      this.cursorHunter.setScale(1, 0.82 + Math.sin(time / 130) * 0.04);
+      this.cursorHunter.setScale(
+        CURSOR_HUNTER_SIZE_RATIO,
+        (0.82 + Math.sin(time / 130) * 0.04) * CURSOR_HUNTER_SIZE_RATIO,
+      );
     }
     this.cursorHunter.setAlpha(0.82 + Math.sin(time / 95) * 0.14);
     if (this.cursorWarning) {
-      this.cursorWarning.setPosition(this.cursorHunter.x + 12, this.cursorHunter.y + 18);
+      this.cursorWarning.setPosition(
+        this.cursorHunter.x + 12 * CURSOR_HUNTER_SIZE_RATIO,
+        this.cursorHunter.y + 18 * CURSOR_HUNTER_SIZE_RATIO,
+      );
     }
   }
 
@@ -1085,7 +1099,12 @@ export class GameplayScene extends Phaser.Scene {
         }
         dragLine.clear();
         dragLine.lineStyle(3, 0xff3155, 0.9);
-        dragLine.lineBetween(this.cursorHunter.x + 14, this.cursorHunter.y + 46, this.player.x, this.player.y);
+        dragLine.lineBetween(
+          this.cursorHunter.x + 14 * CURSOR_HUNTER_SIZE_RATIO,
+          this.cursorHunter.y + 46 * CURSOR_HUNTER_SIZE_RATIO,
+          this.player.x,
+          this.player.y,
+        );
       },
     });
 

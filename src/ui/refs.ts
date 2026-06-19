@@ -5,6 +5,7 @@ export interface DomUiRefs {
   petDraw: HTMLElement;
   pause: HTMLElement;
   ending: HTMLElement;
+  gmPanel: HTMLElement;
   coverStage: HTMLElement;
   prompt: HTMLInputElement;
   body: HTMLSelectElement;
@@ -13,9 +14,17 @@ export interface DomUiRefs {
   chapter: HTMLElement;
   objective: HTMLElement;
   integrityBar: HTMLElement;
+  integrityText: HTMLElement;
+  massBar: HTMLElement;
+  massText: HTMLElement;
   boss: HTMLElement;
+  bossBar: HTMLElement;
+  currentAbility: HTMLElement;
   stats: HTMLElement;
   abilities: HTMLElement;
+  warnings: HTMLElement;
+  devourPrompt: HTMLElement;
+  statusLine: HTMLElement;
   log: HTMLElement;
   endingTitle: HTMLElement;
   endingBody: HTMLElement;
@@ -53,6 +62,7 @@ export function collectDomUiRefs(root: HTMLElement): DomUiRefs {
     petDraw: queryRequired<HTMLElement>(root, '[data-panel="pet-draw"]'),
     pause: queryRequired<HTMLElement>(root, '[data-panel="pause"]'),
     ending: queryRequired<HTMLElement>(root, '[data-panel="ending"]'),
+    gmPanel: queryRequired<HTMLElement>(root, '[data-panel="gm"]'),
     coverStage: queryRequired<HTMLElement>(root, '[data-ref="coverStage"]'),
     prompt: queryRequired<HTMLInputElement>(root, '[data-ref="prompt"]'),
     body: queryRequired<HTMLSelectElement>(root, '[data-ref="body"]'),
@@ -61,9 +71,17 @@ export function collectDomUiRefs(root: HTMLElement): DomUiRefs {
     chapter: queryRequired<HTMLElement>(root, '[data-ref="chapter"]'),
     objective: queryRequired<HTMLElement>(root, '[data-ref="objective"]'),
     integrityBar: queryRequired<HTMLElement>(root, '[data-ref="integrityBar"]'),
+    integrityText: queryRequired<HTMLElement>(root, '[data-ref="integrityText"]'),
+    massBar: queryRequired<HTMLElement>(root, '[data-ref="massBar"]'),
+    massText: queryRequired<HTMLElement>(root, '[data-ref="massText"]'),
     boss: queryRequired<HTMLElement>(root, '[data-ref="boss"]'),
+    bossBar: queryRequired<HTMLElement>(root, '[data-ref="bossBar"]'),
+    currentAbility: queryRequired<HTMLElement>(root, '[data-ref="currentAbility"]'),
     stats: queryRequired<HTMLElement>(root, '[data-ref="stats"]'),
     abilities: queryRequired<HTMLElement>(root, '[data-ref="abilities"]'),
+    warnings: queryRequired<HTMLElement>(root, '[data-ref="warnings"]'),
+    devourPrompt: queryRequired<HTMLElement>(root, '[data-ref="devourPrompt"]'),
+    statusLine: queryRequired<HTMLElement>(root, '[data-ref="statusLine"]'),
     log: queryRequired<HTMLElement>(root, '[data-ref="log"]'),
     endingTitle: queryRequired<HTMLElement>(root, '[data-ref="endingTitle"]'),
     endingBody: queryRequired<HTMLElement>(root, '[data-ref="endingBody"]'),

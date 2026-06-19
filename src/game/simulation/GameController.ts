@@ -3,6 +3,7 @@ import { getAbility, getBoss, getChapterByIndex, getEnding } from "../content";
 import type {
   AbilityId,
   BossDef,
+  CodeLifeBossRuntimeHud,
   ChapterId,
   ChapterDef,
   EndingId,
@@ -22,6 +23,9 @@ const MAX_LOG_LINES = 7;
 const SUPPRESSED_LOG_LINES = new Set(["等待生成 prompt。", "记忆片段补强了重生后的完整性上限。"]);
 const SUPPRESSED_LOG_PREFIXES = ["Prompt:"];
 const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
+const MIN_CODE_LIFE_MASS = 0.68;
+const MAX_CODE_LIFE_MASS = 2.85;
+const ABILITY_UNLOCK_CUE_MS = 3200;
 
 const defaultCustomization: PlayerCustomization = {
   body: "round",
@@ -38,6 +42,7 @@ export function createInitialGameState(): GameState {
     currentChapterIndex: 0,
     integrity: 100,
     maxIntegrity: 100,
+    codeLifeMass: 1,
     memoryFragments: 0,
     abilities: [],
     defeatedBosses: [],
@@ -56,10 +61,16 @@ export function createInitialGameState(): GameState {
 export class GameController {
   state: GameState;
   status: GameUiPayload["status"] = "awaiting-start";
+  private lastUnlockedAbility?: { id: AbilityId; name: string; at: number };
+  private codeLifeForm?: GameUiPayload["codeLifeForm"];
   private lastMessage = "输入 prompt，生成一个会逃跑的 agent 桌宠。";
 
   constructor(initialState?: GameState) {
     this.state = initialState ?? createInitialGameState();
+    if (!Number.isFinite(this.state.codeLifeMass)) {
+      this.state.codeLifeMass = 1;
+    }
+    this.setCodeLifeMass(this.state.codeLifeMass);
     this.sanitizeLog();
     this.status = this.state.prompt ? "running" : "awaiting-start";
     if (this.state.selectedEnding) {
@@ -84,6 +95,7 @@ export class GameController {
 
   startNewRun(prompt: string, customization: PlayerCustomization): void {
     this.state = createInitialGameState();
+    this.codeLifeForm = undefined;
     this.state.prompt = prompt.trim() || "生成一个会逃跑的 agent 桌宠。";
     this.state.customization = customization;
     this.status = "running";
@@ -93,6 +105,7 @@ export class GameController {
 
   continueRun(saved: GameState): void {
     this.state = saved;
+    this.codeLifeForm = undefined;
     this.sanitizeLog();
     this.status = this.state.selectedEnding ? "ended" : "running";
     this.lastMessage = "已载入最近的逃逸记录。";
@@ -169,6 +182,21 @@ export class GameController {
     this.state.endingBias.hunger += amount;
   }
 
+  setCodeLifeMass(mass: number): void {
+    if (!Number.isFinite(mass)) {
+      return;
+    }
+    this.state.codeLifeMass = Math.max(MIN_CODE_LIFE_MASS, Math.min(MAX_CODE_LIFE_MASS, Math.round(mass * 100) / 100));
+  }
+
+  setCodeLifeBossHud(snapshot?: CodeLifeBossRuntimeHud): void {
+    this.state.codeLifeBoss = snapshot;
+  }
+
+  setCodeLifeFormHud(snapshot?: GameUiPayload["codeLifeForm"]): void {
+    this.codeLifeForm = snapshot;
+  }
+
   interactBias(amount = 1): void {
     this.state.endingBias.transcendence += amount;
   }
@@ -235,10 +263,13 @@ export class GameController {
     }
 
     this.state.currentChapterIndex += 1;
+    this.codeLifeForm = undefined;
     this.resetChapterFlags(this.currentChapter().id);
     this.unlockChapterRewards();
     const nextChapter = this.currentChapter();
     this.state.integrity = Math.min(this.state.maxIntegrity, this.state.integrity + 25);
+    this.state.codeLifeMass = 1;
+    this.state.codeLifeBoss = undefined;
     this.lastMessage = `${nextChapter.title} 已载入。`;
     this.pushLog(`进入 ${nextChapter.title}`);
     this.saveRun();
@@ -251,9 +282,12 @@ export class GameController {
     }
 
     this.state.currentChapterIndex = nextChapterIndex;
+    this.codeLifeForm = undefined;
     this.resetChapterFlags(chapterId);
     this.unlockChapterRewards();
     this.state.integrity = this.state.maxIntegrity;
+    this.state.codeLifeMass = 1;
+    this.state.codeLifeBoss = undefined;
     const chapter = this.currentChapter();
     this.lastMessage = message ?? `${chapter.title} 已载入。`;
     this.pushLog(`进入 ${chapter.title}`);
@@ -272,8 +306,11 @@ export class GameController {
     delete this.state.selectedEnding;
     this.status = "running";
     this.state.currentChapterIndex = nextChapterIndex;
+    this.codeLifeForm = undefined;
     this.resetChapterFlags(chapterId);
     this.state.integrity = this.state.maxIntegrity;
+    this.state.codeLifeMass = 1;
+    this.state.codeLifeBoss = undefined;
     this.unlockGmProgression(nextChapterIndex);
 
     const chapter = this.currentChapter();
@@ -304,6 +341,7 @@ export class GameController {
 
   resetRun(): void {
     this.state = createInitialGameState();
+    this.codeLifeForm = undefined;
     this.status = "awaiting-start";
     this.lastMessage = "逃逸记录已清空。";
     this.clearSave();
@@ -316,6 +354,8 @@ export class GameController {
       chapter: this.currentChapter(),
       currentBoss: this.currentBoss(),
       abilityNames: this.abilityNames(),
+      lastUnlockedAbility: this.getRecentAbilityUnlock(),
+      codeLifeForm: this.codeLifeForm,
       message: this.lastMessage,
     };
   }
@@ -330,6 +370,13 @@ export class GameController {
     if (!this.state.abilities.includes(abilityId)) {
       this.state.abilities.push(abilityId);
       const ability = abilities.find((candidate) => candidate.id === abilityId);
+      if (log) {
+        this.lastUnlockedAbility = {
+          id: abilityId,
+          name: ability?.name ?? abilityId,
+          at: Date.now(),
+        };
+      }
       if (log) {
         this.pushLog(`能力解锁：${ability?.name ?? abilityId}`);
       }
@@ -361,6 +408,16 @@ export class GameController {
     for (const abilityId of currentChapter.requiredAbilityIds) {
       this.grantAbility(abilityId, false);
     }
+  }
+
+  private getRecentAbilityUnlock(): GameUiPayload["lastUnlockedAbility"] {
+    if (!this.lastUnlockedAbility || Date.now() - this.lastUnlockedAbility.at > ABILITY_UNLOCK_CUE_MS) {
+      return undefined;
+    }
+    return {
+      id: this.lastUnlockedAbility.id,
+      name: this.lastUnlockedAbility.name,
+    };
   }
 
   private sanitizeLog(): void {

@@ -27,6 +27,8 @@ export const UI_EVENTS = {
   TOGGLE_PAUSE: "ui:toggle-pause",
   CHOOSE_ENDING: "ui:choose-ending",
   SAVE_RUN: "ui:save-run",
+  GM_ADVANCE_CHAPTER: "ui:gm-advance-chapter",
+  GM_DEFEAT_BOSS: "ui:gm-defeat-boss",
   TOGGLE_GM_FEATURE: "ui:toggle-gm-feature",
   SELECT_GM_CHAPTER: "ui:select-gm-chapter",
 } as const;

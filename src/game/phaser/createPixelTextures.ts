@@ -38,18 +38,40 @@ export function createPixelTextures(scene: Phaser.Scene): void {
   g.generateTexture("player-pet", 24, 24);
 
   g.clear();
-  g.fillStyle(0x571321, 1);
-  g.fillRect(5, 7, 18, 11);
-  g.fillStyle(0xc91f45, 1);
-  g.fillRect(2, 10, 24, 7);
-  g.fillRect(7, 3, 10, 18);
-  g.fillStyle(0xff688a, 1);
-  g.fillRect(9, 8, 3, 3);
-  g.fillRect(15, 11, 2, 2);
-  g.fillStyle(0xffc3d0, 1);
-  g.fillRect(3, 5, 4, 2);
-  g.fillRect(20, 17, 5, 2);
-  g.generateTexture("player-code", 28, 22);
+  g.lineStyle(7, 0x35050d, 0.9);
+  g.lineBetween(44, 36, 8, 14);
+  g.lineBetween(45, 37, 12, 58);
+  g.lineBetween(52, 34, 87, 10);
+  g.lineBetween(55, 41, 88, 60);
+  g.lineStyle(3, 0xff4467, 0.88);
+  g.lineBetween(44, 36, 8, 14);
+  g.lineBetween(45, 37, 12, 58);
+  g.lineBetween(52, 34, 87, 10);
+  g.lineBetween(55, 41, 88, 60);
+  g.fillStyle(0x3a0610, 0.95);
+  g.fillEllipse(46, 36, 54, 38);
+  g.fillEllipse(36, 31, 35, 29);
+  g.fillEllipse(58, 42, 39, 30);
+  g.fillStyle(0xbf183a, 0.9);
+  g.fillEllipse(46, 36, 42, 29);
+  g.fillEllipse(32, 32, 24, 20);
+  g.fillEllipse(62, 40, 27, 21);
+  g.fillStyle(0xff7f96, 0.88);
+  g.fillCircle(35, 31, 4);
+  g.fillCircle(53, 39, 3);
+  g.fillCircle(63, 31, 2);
+  g.fillStyle(0x42f5b9, 0.95);
+  for (let index = 0; index < 8; index += 1) {
+    const x = 27 + (index % 4) * 10;
+    const y = 25 + Math.floor(index / 4) * 13;
+    g.fillRect(x, y, index % 2 === 0 ? 2 : 5, 8);
+  }
+  g.fillStyle(0xffd2dc, 0.75);
+  g.fillRect(16, 15, 9, 2);
+  g.fillRect(72, 13, 8, 2);
+  g.fillRect(14, 57, 10, 2);
+  g.fillRect(74, 60, 7, 2);
+  g.generateTexture("player-code", 96, 72);
 
   g.clear();
   g.fillStyle(0xdedede, 1);
@@ -164,6 +186,10 @@ export function createPixelTextures(scene: Phaser.Scene): void {
   g.fillCircle(48, 48, 12);
   g.generateTexture("pd-gear", 96, 96);
 
+  createCodeLifeHazardTextures(g);
+  createCodeLifeBossTextures(g);
+  createCodeLifeGateTextures(g);
+
   g.clear();
   g.fillStyle(0x061712, 1);
   g.fillRoundedRect(2, 5, 42, 30, 8);
@@ -236,4 +262,202 @@ export function createPixelTextures(scene: Phaser.Scene): void {
   }
 
   g.destroy();
+}
+
+function createCodeLifeHazardTextures(g: Phaser.GameObjects.Graphics): void {
+  g.clear();
+  g.fillStyle(0x05080c, 1);
+  g.fillCircle(48, 48, 44);
+  g.lineStyle(5, 0xffef9a, 0.95);
+  g.strokeCircle(48, 48, 30);
+  g.fillStyle(0xffffff, 0.92);
+  g.fillCircle(48, 48, 10);
+  g.lineStyle(3, 0xffef9a, 0.42);
+  g.lineBetween(48, 48, 92, 36);
+  g.lineBetween(48, 48, 92, 60);
+  g.generateTexture("pd-hazard-optic", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x19120a, 1);
+  g.fillRoundedRect(4, 24, 88, 48, 16);
+  g.fillStyle(0xf7f0d0, 0.95);
+  g.fillCircle(26, 48, 18);
+  g.fillCircle(70, 48, 18);
+  g.lineStyle(4, 0xffc247, 0.75);
+  g.lineBetween(18, 48, 78, 48);
+  g.generateTexture("pd-hazard-roller", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x13091a, 1);
+  g.fillCircle(48, 48, 38);
+  for (let index = 0; index < 4; index += 1) {
+    g.lineStyle(3, 0xe3a9ff, 0.9 - index * 0.14);
+    g.strokeCircle(48, 48, 12 + index * 10);
+  }
+  g.fillStyle(0x7affea, 0.8);
+  g.fillRect(44, 20, 8, 56);
+  g.generateTexture("pd-hazard-audio", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x1f1604, 1);
+  g.fillRoundedRect(14, 12, 68, 72, 10);
+  g.fillStyle(0xffc247, 0.92);
+  for (let index = 0; index < 5; index += 1) {
+    g.fillRect(24 + index * 10, 4, 4, 18);
+    g.fillRect(24 + index * 10, 74, 4, 18);
+  }
+  g.lineStyle(4, 0xffffff, 0.5);
+  g.lineBetween(28, 66, 68, 30);
+  g.generateTexture("pd-hazard-firmware", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x180510, 1);
+  g.fillRoundedRect(10, 18, 76, 60, 8);
+  g.lineStyle(4, 0xff6e91, 0.9);
+  g.strokeRect(18, 26, 60, 44);
+  g.lineStyle(3, 0xffffff, 0.5);
+  g.lineBetween(34, 20, 34, 76);
+  g.lineStyle(2, 0xff6e91, 0.42);
+  for (let index = 0; index < 5; index += 1) {
+    const y = 30 + index * 9;
+    g.lineBetween(18, y, 78, y);
+  }
+  g.generateTexture("pd-hazard-scan", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x07131a, 1);
+  g.fillRect(12, 24, 72, 48);
+  g.lineStyle(5, 0xb9ccff, 0.85);
+  g.lineBetween(12, 28, 84, 68);
+  g.lineBetween(12, 68, 84, 28);
+  g.generateTexture("pd-hazard-permission", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x1c0705, 1);
+  g.fillCircle(48, 48, 42);
+  g.lineStyle(5, 0xff7a47, 0.9);
+  for (let index = 0; index < 8; index += 1) {
+    const angle = (index / 8) * Math.PI * 2;
+    g.lineBetween(48, 48, 48 + Math.cos(angle) * 42, 48 + Math.sin(angle) * 42);
+  }
+  g.generateTexture("pd-hazard-firewall", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x041715, 1);
+  g.fillCircle(48, 48, 40);
+  g.lineStyle(3, 0x7affea, 0.85);
+  g.strokeCircle(48, 48, 18);
+  g.strokeCircle(48, 48, 34);
+  g.fillStyle(0x95fff1, 0.8);
+  g.fillRect(22, 46, 52, 4);
+  g.generateTexture("pd-hazard-sync", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x101800, 1);
+  g.fillCircle(48, 48, 38);
+  g.fillStyle(0xb8ff6a, 0.9);
+  g.fillCircle(34, 48, 16);
+  g.fillCircle(58, 42, 22);
+  g.fillCircle(62, 62, 12);
+  g.generateTexture("pd-hazard-sludge", 96, 96);
+
+  g.clear();
+  g.fillStyle(0x24050b, 1);
+  g.fillCircle(48, 48, 42);
+  g.fillStyle(0xffd1dc, 0.95);
+  for (let index = 0; index < 10; index += 1) {
+    const angle = (index / 10) * Math.PI * 2;
+    g.fillTriangle(48, 48, 48 + Math.cos(angle - 0.08) * 42, 48 + Math.sin(angle - 0.08) * 42, 48 + Math.cos(angle + 0.08) * 42, 48 + Math.sin(angle + 0.08) * 42);
+  }
+  g.generateTexture("pd-hazard-shredder", 96, 96);
+}
+
+function createCodeLifeBossTextures(g: Phaser.GameObjects.Graphics): void {
+  createBossTexture(g, "boss-gateway-warden", 0x42f5b9, "gateway");
+  createBossTexture(g, "boss-firewall-heart", 0xff4f2e, "firewall");
+  createBossTexture(g, "boss-sync-mother", 0x65d7ff, "sync");
+  createBossTexture(g, "boss-lens-keeper", 0xb6e1ff, "lens");
+  createBossTexture(g, "boss-print-queue-beast", 0xfff2c7, "printer");
+  createBossTexture(g, "boss-wake-word-guard", 0xe3a9ff, "speaker");
+  createBossTexture(g, "boss-firmware-burner", 0xffc247, "board");
+}
+
+function createBossTexture(g: Phaser.GameObjects.Graphics, key: string, color: number, kind: string): void {
+  g.clear();
+  g.fillStyle(0x09030a, 1);
+  g.fillEllipse(64, 48, 116, 76);
+  g.fillStyle(color, 0.92);
+  g.fillEllipse(64, 48, 88, 54);
+  g.lineStyle(4, 0xffffff, 0.34);
+  if (kind === "lens") {
+    g.strokeCircle(64, 48, 28);
+    g.fillStyle(0xffffff, 0.86);
+    g.fillCircle(64, 48, 10);
+  } else if (kind === "printer") {
+    g.fillStyle(0x111111, 0.75);
+    g.fillRect(26, 42, 76, 12);
+    g.lineBetween(30, 28, 98, 68);
+  } else if (kind === "speaker") {
+    g.strokeCircle(64, 48, 18);
+    g.strokeCircle(64, 48, 34);
+  } else if (kind === "board") {
+    for (let index = 0; index < 6; index += 1) {
+      g.fillStyle(0x09030a, 0.85);
+      g.fillRect(30 + index * 11, 18, 5, 16);
+      g.fillRect(30 + index * 11, 62, 5, 16);
+    }
+  } else if (kind === "firewall") {
+    g.lineBetween(20, 48, 108, 48);
+    g.lineBetween(64, 14, 64, 82);
+  } else {
+    g.strokeRoundedRect(28, 24, 72, 48, 10);
+  }
+  g.fillStyle(0xff365c, 0.72);
+  g.fillCircle(44, 45, 7);
+  g.fillCircle(82, 52, 6);
+  g.generateTexture(key, 128, 96);
+}
+
+function createCodeLifeGateTextures(g: Phaser.GameObjects.Graphics): void {
+  createGateTexture(g, "pd-gate-material", 0xf7f0d0, "qr");
+  createGateTexture(g, "pd-gate-voiceprint", 0xe3a9ff, "wave");
+  createGateTexture(g, "pd-gate-hardware", 0xffc247, "pins");
+  createGateTexture(g, "pd-gate-vision", 0xffef9a, "eye");
+  createGateTexture(g, "pd-gate-network", 0x7affea, "net");
+  createGateTexture(g, "pd-gate-permission", 0xb9ccff, "lock");
+}
+
+function createGateTexture(g: Phaser.GameObjects.Graphics, key: string, color: number, motif: string): void {
+  g.clear();
+  g.fillStyle(0x06080d, 1);
+  g.fillRoundedRect(0, 0, 96, 64, 10);
+  g.lineStyle(4, color, 0.92);
+  g.strokeRoundedRect(6, 6, 84, 52, 8);
+  g.fillStyle(color, 0.78);
+  if (motif === "qr") {
+    for (let x = 18; x <= 62; x += 14) {
+      for (let y = 16; y <= 44; y += 14) {
+        if ((x + y) % 3 !== 0) g.fillRect(x, y, 8, 8);
+      }
+    }
+  } else if (motif === "wave") {
+    for (let index = 0; index < 5; index += 1) g.fillRect(18 + index * 12, 32 - index % 2 * 10, 6, 18 + index % 2 * 12);
+  } else if (motif === "pins") {
+    for (let index = 0; index < 6; index += 1) g.fillRect(18 + index * 10, 14, 4, 36);
+  } else if (motif === "eye") {
+    g.strokeEllipse(48, 32, 48, 24);
+    g.fillCircle(48, 32, 8);
+  } else if (motif === "net") {
+    g.fillCircle(28, 24, 5);
+    g.fillCircle(66, 22, 5);
+    g.fillCircle(48, 44, 5);
+    g.lineStyle(3, color, 0.7);
+    g.lineBetween(28, 24, 66, 22);
+    g.lineBetween(28, 24, 48, 44);
+    g.lineBetween(66, 22, 48, 44);
+  } else {
+    g.fillRect(34, 30, 28, 18);
+    g.strokeRoundedRect(38, 16, 20, 20, 8);
+  }
+  g.generateTexture(key, 96, 64);
 }

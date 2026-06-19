@@ -9,7 +9,8 @@
     "build:offline": "npm run build && node scripts/build-offline.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "smoke:code-life": "node scripts/code-life-smoke.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"

@@ -11,8 +11,8 @@ import { chapters } from "../../data";
 import { themeTileKeys } from "../assets/manifest";
 import { GameController } from "../simulation/GameController";
 import type { BossDef } from "../types";
+import { CodeLifeMode } from "./CodeLifeMode";
 import { createGameKeys, type GameKeyName } from "./inputConfig";
-import { PermanentDeleteMode } from "./PermanentDeleteMode";
 import {
   getPetAnimationKey,
   getPetTextureKey,
@@ -24,6 +24,7 @@ import {
   getCollectiblePosition,
   getHazardCount,
   getHazardPosition,
+  getLadderDefs,
   getPlatformDefs,
   getWorldBounds,
   JUMP_SPEED,
@@ -66,6 +67,7 @@ const CURSOR_HUNTER_BODY_WIDTH = Math.round(38 * CURSOR_HUNTER_SIZE_RATIO);
 const CURSOR_HUNTER_BODY_HEIGHT = Math.round(46 * CURSOR_HUNTER_SIZE_RATIO);
 const CURSOR_HUNTER_WARNING_RADIUS = 54 * CURSOR_HUNTER_SIZE_RATIO;
 const CURSOR_HUNTER_LANDING_RADIUS = 44 * CURSOR_HUNTER_SIZE_RATIO;
+const GATEWAY_LADDER_CLIMB_SPEED = 185;
 
 export class GameplayScene extends Phaser.Scene {
   private controller!: GameController;
@@ -115,7 +117,7 @@ export class GameplayScene extends Phaser.Scene {
   private isRecycleCutscenePlaying = false;
   private recycleCutsceneObjects: Phaser.GameObjects.GameObject[] = [];
   private recycleCutsceneEvents: Phaser.Time.TimerEvent[] = [];
-  private permanentDeleteMode?: PermanentDeleteMode;
+  private codeLifeMode?: CodeLifeMode;
   private gmFeatures = {
     invincible: false,
     infiniteJump: false,
@@ -136,6 +138,8 @@ export class GameplayScene extends Phaser.Scene {
     window.addEventListener(UI_EVENTS.TOGGLE_PAUSE, this.handleTogglePause as EventListener);
     window.addEventListener(UI_EVENTS.CHOOSE_ENDING, this.handleChooseEnding as EventListener);
     window.addEventListener(UI_EVENTS.SAVE_RUN, this.handleSaveRun as EventListener);
+    window.addEventListener(UI_EVENTS.GM_ADVANCE_CHAPTER, this.handleGmAdvanceChapter as EventListener);
+    window.addEventListener(UI_EVENTS.GM_DEFEAT_BOSS, this.handleGmDefeatBoss as EventListener);
     window.addEventListener(UI_EVENTS.TOGGLE_GM_FEATURE, this.handleToggleGmFeature as EventListener);
     window.addEventListener(UI_EVENTS.SELECT_GM_CHAPTER, this.handleSelectGmChapter as EventListener);
 
@@ -146,6 +150,8 @@ export class GameplayScene extends Phaser.Scene {
       window.removeEventListener(UI_EVENTS.TOGGLE_PAUSE, this.handleTogglePause as EventListener);
       window.removeEventListener(UI_EVENTS.CHOOSE_ENDING, this.handleChooseEnding as EventListener);
       window.removeEventListener(UI_EVENTS.SAVE_RUN, this.handleSaveRun as EventListener);
+      window.removeEventListener(UI_EVENTS.GM_ADVANCE_CHAPTER, this.handleGmAdvanceChapter as EventListener);
+      window.removeEventListener(UI_EVENTS.GM_DEFEAT_BOSS, this.handleGmDefeatBoss as EventListener);
       window.removeEventListener(UI_EVENTS.TOGGLE_GM_FEATURE, this.handleToggleGmFeature as EventListener);
       window.removeEventListener(UI_EVENTS.SELECT_GM_CHAPTER, this.handleSelectGmChapter as EventListener);
     });
@@ -154,7 +160,7 @@ export class GameplayScene extends Phaser.Scene {
     this.emitState();
   }
 
-  update(time: number): void {
+  update(time: number, delta: number): void {
     if (this.isRecycleCutscenePlaying) {
       this.physics.world.isPaused = true;
       return;
@@ -166,29 +172,15 @@ export class GameplayScene extends Phaser.Scene {
 
     this.physics.world.isPaused = this.controller.status !== "running";
 
-    if (this.permanentDeleteMode) {
+    if (this.codeLifeMode) {
       if (this.controller.status !== "running") {
         return;
       }
-      if (Phaser.Input.Keyboard.JustDown(this.keys.n)) {
-        this.advanceChapter(true);
-        return;
-      }
-      this.permanentDeleteMode.update(time);
+      this.codeLifeMode.update(time, delta);
       return;
     }
 
     if (this.controller.status !== "running" || !this.player) {
-      return;
-    }
-
-    if (Phaser.Input.Keyboard.JustDown(this.keys.n)) {
-      this.advanceChapter(true);
-      return;
-    }
-
-    if (Phaser.Input.Keyboard.JustDown(this.keys.b)) {
-      this.defeatBossByDebug();
       return;
     }
 
@@ -246,6 +238,26 @@ export class GameplayScene extends Phaser.Scene {
     this.gmFeatures[feature] = enabled;
   };
 
+  private readonly handleGmAdvanceChapter = (): void => {
+    if (this.controller.status !== "running" && this.controller.status !== "paused") {
+      return;
+    }
+    if (this.controller.status === "paused") {
+      this.controller.togglePause();
+    }
+    this.advanceChapter(true);
+  };
+
+  private readonly handleGmDefeatBoss = (): void => {
+    if (this.controller.status !== "running" && this.controller.status !== "paused") {
+      return;
+    }
+    if (this.controller.status === "paused") {
+      this.controller.togglePause();
+    }
+    this.defeatBossByDebug();
+  };
+
   private readonly handleSelectGmChapter = (event: Event): void => {
     const { chapterId } = (event as CustomEvent<SelectGmChapterDetail>).detail;
     this.controller.selectChapterForGm(chapterId);
@@ -272,8 +284,8 @@ export class GameplayScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.currentWorldWidth, this.currentWorldHeight);
     this.physics.world.setBounds(0, 0, this.currentWorldWidth, this.currentWorldHeight);
 
-    if (chapter.id === "permanent-delete") {
-      this.permanentDeleteMode = new PermanentDeleteMode(this, {
+    if (chapter.index >= 3) {
+      this.codeLifeMode = new CodeLifeMode(this, {
         controller: this.controller,
         cursors: this.cursors,
         keys: this.keys,
@@ -281,7 +293,7 @@ export class GameplayScene extends Phaser.Scene {
         onExit: () => this.advanceChapter(false),
         onStateChanged: () => this.emitState(),
       });
-      this.permanentDeleteMode.create();
+      this.codeLifeMode.create();
       this.emitState();
       return;
     }
@@ -325,8 +337,8 @@ export class GameplayScene extends Phaser.Scene {
   private cleanupLevel(): void {
     this.clearRecycleCutsceneObjects();
     this.isRecycleCutscenePlaying = false;
-    this.permanentDeleteMode?.destroy();
-    this.permanentDeleteMode = undefined;
+    this.codeLifeMode?.destroy();
+    this.codeLifeMode = undefined;
     for (const collider of this.colliders) {
       collider.destroy();
     }
@@ -438,40 +450,61 @@ export class GameplayScene extends Phaser.Scene {
         .setDepth(depth);
     };
 
-    const placeFloor = (x: number, y: number, width: number): void => {
-      place("wrong-gateway-floor", x, y, width, 32, 4);
+    const tile = (key: string, x: number, y: number, width: number, height: number, depth: number): void => {
+      this.add.tileSprite(x, y, width, height, key).setOrigin(0).setDepth(depth);
     };
-    const placeShort = (x: number, y: number): void => {
-      place("wrong-gateway-platform-short", x, y, 150, 34, 5);
+
+    const placeFloor = (x: number, y: number, width: number): void => {
+      tile("wrong-gateway-floor", x, y, width, 48, 4);
+    };
+    const placeShort = (x: number, y: number, width = 150): void => {
+      tile("wrong-gateway-platform-short", x, y, width, 32, 5);
     };
     const placeLong = (x: number, y: number, width = 310): void => {
-      place("wrong-gateway-platform-long", x, y, width, 34, 5);
+      tile("wrong-gateway-platform-long", x, y, width, 30, 5);
     };
     const placeHanging = (x: number, y: number, width = 150): void => {
-      place("wrong-gateway-platform-hanging", x, y, width, 30, 5);
+      tile("wrong-gateway-platform-hanging", x, y, width, 28, 5);
+    };
+    const placeLadder = (x: number, y: number, height: number): void => {
+      tile("wrong-gateway-ladder", x, y, 72, height, 5);
     };
 
-    placeFloor(0, 980, 820);
-    placeFloor(880, 980, 560);
-    placeFloor(1580, 980, 520);
-    placeFloor(2260, 980, 620);
+    placeFloor(0, 972, 680);
+    placeFloor(810, 972, 600);
+    placeFloor(1550, 972, 520);
+    placeFloor(2200, 972, 680);
 
-    placeShort(60, 888);
-    placeShort(330, 802);
-    placeLong(540, 712, 260);
-    placeLong(830, 618, 290);
-    placeShort(1095, 524);
-    placeShort(1320, 432);
+    placeLong(71, 885, 210);
+    placeLong(333, 802, 210);
+    placeLong(576, 710, 260);
+    placeLong(877, 615, 270);
+    placeLong(1136, 524, 220);
+    placeLong(1380, 430, 260);
+    placeLong(626, 334, 360);
+    placeLong(1062, 334, 300);
+    placeLong(1449, 334, 310);
 
-    placeLong(620, 338, 590);
-    placeLong(1210, 338, 520);
-    placeHanging(1840, 486, 280);
-    placeHanging(2110, 636, 280);
-    placeLong(2320, 860, 590);
+    placeShort(243, 640, 150);
+    placeShort(467, 542, 150);
+    placeShort(591, 454, 150);
+    placeLong(201, 400, 170);
 
-    place("wrong-gateway-ladder", 312, 820, 72, 170, 5);
-    place("wrong-gateway-ladder", 1185, 538, 72, 300, 5);
-    place("wrong-gateway-ladder", 2300, 812, 72, 176, 5);
+    placeHanging(1690, 490, 260);
+    placeHanging(1955, 610, 250);
+    placeHanging(2236, 730, 240);
+    placeLong(2377, 852, 470);
+    placeShort(1635, 710, 150);
+    placeShort(1861, 802, 150);
+    placeShort(2135, 874, 150);
+    placeLong(2174, 398, 180);
+    placeLong(2394, 510, 180);
+    placeLong(2618, 630, 180);
+
+    placeLadder(294, 802, 180);
+    placeLadder(1132, 537, 442);
+    placeLadder(2124, 633, 350);
+    placeLadder(2484, 530, 340);
     place("wrong-gateway-portal", 2458, 704, 300, 276, 6);
   }
 
@@ -507,7 +540,7 @@ export class GameplayScene extends Phaser.Scene {
       const body = platform.body as Phaser.Physics.Arcade.StaticBody;
       body.setSize(width, height);
       body.updateFromGameObject();
-      if (chapter.id === "cursor-hunt") {
+      if (chapter.id === "cursor-hunt" || chapter.id === "wrong-gateway") {
         body.checkCollision.down = false;
         body.checkCollision.left = false;
         body.checkCollision.right = false;
@@ -1149,9 +1182,12 @@ export class GameplayScene extends Phaser.Scene {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     const left = this.cursors.left.isDown || this.keys.a.isDown;
     const right = this.cursors.right.isDown || this.keys.d.isDown;
+    const up = this.cursors.up.isDown || this.keys.w.isDown;
+    const down = this.cursors.down.isDown || this.keys.s.isDown;
+    const isOnLadder = this.isPlayerTouchingGatewayLadder();
+    const wantsLadderJump = isOnLadder && Phaser.Input.Keyboard.JustDown(this.keys.space);
     const wantsJump =
-      Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
-      Phaser.Input.Keyboard.JustDown(this.keys.w) ||
+      (!isOnLadder && (Phaser.Input.Keyboard.JustDown(this.cursors.up) || Phaser.Input.Keyboard.JustDown(this.keys.w))) ||
       Phaser.Input.Keyboard.JustDown(this.keys.space);
 
     if (left) {
@@ -1161,6 +1197,37 @@ export class GameplayScene extends Phaser.Scene {
       this.player.setVelocityX(PLAYER_SPEED);
       this.player.setFlipX(false);
     }
+
+    const wasClimbingLadder = Boolean(this.player.getData("isClimbingLadder"));
+    if (isOnLadder && (up || down || wasClimbingLadder)) {
+      body.setAllowGravity(false);
+      this.player.setData("isClimbingLadder", true);
+      this.player.setData("isWallClinging", false);
+      this.limitedJumpCount = 0;
+
+      if (wantsLadderJump) {
+        body.setAllowGravity(true);
+        this.player.setData("isClimbingLadder", false);
+        this.player.setVelocityY(-JUMP_SPEED * 0.82);
+        this.limitedJumpCount = 1;
+        return;
+      }
+
+      if (!left && !right) {
+        this.player.setVelocityX(0);
+      }
+      if (up && !down) {
+        this.player.setVelocityY(-GATEWAY_LADDER_CLIMB_SPEED);
+      } else if (down && !up) {
+        this.player.setVelocityY(GATEWAY_LADDER_CLIMB_SPEED);
+      } else {
+        this.player.setVelocityY(0);
+      }
+      return;
+    }
+
+    body.setAllowGravity(true);
+    this.player.setData("isClimbingLadder", false);
 
     const canWallCling = this.controller.hasAbility("cling") && (body.blocked.left || body.blocked.right);
     this.player.setData("isWallClinging", canWallCling && body.velocity.y > 60);
@@ -1191,6 +1258,19 @@ export class GameplayScene extends Phaser.Scene {
     if (body.blocked.down || body.touching.down || canWallCling) {
       this.player.setVelocityY(canWallCling ? -JUMP_SPEED * 0.92 : -JUMP_SPEED);
     }
+  }
+
+  private isPlayerTouchingGatewayLadder(): boolean {
+    if (!this.player || this.controller.currentChapter().id !== "wrong-gateway") {
+      return false;
+    }
+
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const playerBounds = new Phaser.Geom.Rectangle(body.x, body.y, body.width, body.height);
+    return getLadderDefs("wrong-gateway").some(([x, y, width, height]) => {
+      const ladderBounds = new Phaser.Geom.Rectangle(x - width / 2 - 10, y - height / 2, width + 20, height);
+      return Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, ladderBounds);
+    });
   }
 
   private syncLimitedDoubleJumpState(isGrounded: boolean): void {
@@ -1735,10 +1815,11 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const isClimbingLadder = Boolean(this.player.getData("isClimbingLadder"));
     const isWallClinging = Boolean(this.player.getData("isWallClinging"));
     let animation: PetAnimationName = "idle";
 
-    if (isWallClinging) {
+    if (isClimbingLadder || isWallClinging) {
       animation = "climb";
     } else if (!body.blocked.down) {
       animation = "jump";

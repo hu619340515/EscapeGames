@@ -10,6 +10,7 @@ export const PLAYER_SPEED = 250;
 export const JUMP_SPEED = 480;
 
 export type PlatformDef = readonly [x: number, y: number, width: number, height: number];
+export type LadderDef = readonly [x: number, y: number, width: number, height: number];
 
 export interface WorldBounds {
   width: number;
@@ -28,23 +29,23 @@ function cursorHuntSurface(
 }
 
 const cursorHuntPlatforms: PlatformDef[] = [
-  cursorHuntSurface(CURSOR_HUNT_WORLD_WIDTH / 2, 875, CURSOR_HUNT_WORLD_WIDTH, 18),
-  cursorHuntSurface(154, 150, 294),
-  cursorHuntSurface(170, 304, 120),
-  cursorHuntSurface(480, 292, 285),
-  cursorHuntSurface(332, 404, 330),
-  cursorHuntSurface(320, 608, 330),
-  cursorHuntSurface(300, 713, 190),
-  cursorHuntSurface(565, 723, 160),
-  cursorHuntSurface(670, 101, 160),
-  cursorHuntSurface(755, 349, 54),
-  cursorHuntSurface(812, 467, 280),
-  cursorHuntSurface(785, 612, 220),
-  cursorHuntSurface(1040, 407, 250),
-  cursorHuntSurface(1130, 733, 300),
-  cursorHuntSurface(1310, 120, 190),
-  cursorHuntSurface(1310, 407, 210),
-  cursorHuntSurface(1525, 407, 260),
+  cursorHuntSurface(CURSOR_HUNT_WORLD_WIDTH / 2, 884, CURSOR_HUNT_WORLD_WIDTH, 18),
+  cursorHuntSurface(154, 164, 294),
+  cursorHuntSurface(170, 282, 120),
+  cursorHuntSurface(480, 256, 285),
+  cursorHuntSurface(332, 400, 330),
+  cursorHuntSurface(320, 614, 330),
+  cursorHuntSurface(300, 710, 190),
+  cursorHuntSurface(565, 731, 160),
+  cursorHuntSurface(670, 120, 160),
+  cursorHuntSurface(755, 342, 54),
+  cursorHuntSurface(812, 478, 280),
+  cursorHuntSurface(785, 630, 220),
+  cursorHuntSurface(1040, 416, 250),
+  cursorHuntSurface(1130, 710, 300),
+  cursorHuntSurface(1310, 121, 190),
+  cursorHuntSurface(1310, 411, 210),
+  cursorHuntSurface(1525, 411, 260),
 ];
 
 const cursorHuntCollectibles = [
@@ -64,22 +65,50 @@ const cursorHuntHazards = [
   { x: 1480, y: 510 },
 ] as const;
 
+function wrongGatewaySurface(x: number, top: number, width: number, height = 22): PlatformDef {
+  return [x, top + height / 2, width, height];
+}
+
 const wrongGatewayPlatforms: PlatformDef[] = [
-  [410, 996, 820, 28],
-  [1160, 996, 560, 28],
-  [1840, 996, 520, 28],
-  [2560, 996, 640, 28],
-  [170, 908, 220, 22],
-  [410, 822, 210, 22],
-  [670, 732, 250, 22],
-  [960, 638, 270, 22],
-  [1210, 544, 230, 22],
-  [1440, 452, 240, 22],
-  [900, 356, 560, 22],
-  [1448, 356, 500, 22],
-  [1900, 504, 260, 22],
-  [2160, 654, 260, 22],
-  [2578, 878, 560, 28],
+  wrongGatewaySurface(340, 982, 680, 28),
+  wrongGatewaySurface(1110, 982, 600, 28),
+  wrongGatewaySurface(1810, 982, 520, 28),
+  wrongGatewaySurface(2540, 982, 680, 28),
+
+  wrongGatewaySurface(176, 895, 210),
+  wrongGatewaySurface(438, 812, 210),
+  wrongGatewaySurface(706, 720, 260),
+  wrongGatewaySurface(1012, 625, 270),
+  wrongGatewaySurface(1246, 534, 220),
+  wrongGatewaySurface(1510, 440, 260),
+  wrongGatewaySurface(806, 344, 360),
+  wrongGatewaySurface(1212, 344, 300),
+  wrongGatewaySurface(1604, 344, 310),
+
+  wrongGatewaySurface(318, 650, 150),
+  wrongGatewaySurface(542, 552, 150),
+  wrongGatewaySurface(666, 464, 150),
+  wrongGatewaySurface(286, 410, 170),
+
+  wrongGatewaySurface(1820, 500, 260),
+  wrongGatewaySurface(2080, 620, 250),
+  wrongGatewaySurface(2356, 740, 240),
+  wrongGatewaySurface(2612, 862, 470, 28),
+
+  wrongGatewaySurface(1710, 720, 150),
+  wrongGatewaySurface(1936, 812, 150),
+  wrongGatewaySurface(2210, 884, 150),
+
+  wrongGatewaySurface(2264, 408, 180),
+  wrongGatewaySurface(2484, 520, 180),
+  wrongGatewaySurface(2708, 640, 180),
+];
+
+const wrongGatewayLadders: LadderDef[] = [
+  [330, 892, 64, 180],
+  [1168, 758, 64, 442],
+  [2160, 808, 64, 350],
+  [2520, 700, 64, 340],
 ];
 
 const wrongGatewayHazards = [
@@ -126,6 +155,14 @@ export function getPlatformDefs(chapterId: ChapterId, chapterIndex: number): Pla
     [2110, 620, 260, 32],
     [1320, 430, 220, 26],
   ];
+}
+
+export function getLadderDefs(chapterId: ChapterId): LadderDef[] {
+  if (chapterId === "wrong-gateway") {
+    return [...wrongGatewayLadders];
+  }
+
+  return [];
 }
 
 export function getCollectibleCount(chapterId: ChapterId): number {

@@ -3,6 +3,8 @@ import type { ChapterId, GameState, PlayerCustomization } from "../types";
 
 export const SAVE_KEY = "agent-pet-escape-save-v1";
 export const STATE_VERSION = 1;
+const MIN_CODE_LIFE_MASS = 0.68;
+const MAX_CODE_LIFE_MASS = 2.85;
 
 export function createCollectibleRecord(): Record<ChapterId, number> {
   return Object.fromEntries(chapters.map((chapter) => [chapter.id, 0])) as Record<ChapterId, number>;
@@ -44,6 +46,7 @@ export function loadSavedRun(): GameState | undefined {
         petSpecies: parsed.customization.petSpecies ?? "cat",
       } as PlayerCustomization,
       chapterCollectibles,
+      codeLifeMass: sanitizeCodeLifeMass(parsed.codeLifeMass),
     };
   } catch {
     return undefined;
@@ -73,4 +76,11 @@ export function hasSavedRun(): boolean {
   } catch {
     return false;
   }
+}
+
+function sanitizeCodeLifeMass(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 1;
+  }
+  return Math.max(MIN_CODE_LIFE_MASS, Math.min(MAX_CODE_LIFE_MASS, value));
 }

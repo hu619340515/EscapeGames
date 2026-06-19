@@ -150,6 +150,27 @@ export interface EndingBias {
   rescue: number;
 }
 
+export interface CodeLifeBossRuntimeHud {
+  id: BossId | string;
+  name: string;
+  hp: number;
+  maxHp: number;
+  phaseIndex: number;
+  phaseCount: number;
+  phaseLabel: string;
+  state: "inactive" | "intro" | "phase" | "enraged" | "defeated";
+  shieldRatio?: number;
+  window?: "closed" | "damage" | "devour";
+  windowRemainingMs?: number;
+  weaknessLabel?: string;
+}
+
+export interface CodeLifeFormRuntimeHud {
+  id: "thread" | "packet" | "brute";
+  label: string;
+  segments: number;
+}
+
 export interface PlayerCustomization {
   body: "round" | "long-tail" | "tendril-bud" | "pixel-core";
   personality: "timid" | "curious" | "volatile" | "clingy";
@@ -164,6 +185,8 @@ export interface GameState {
   currentChapterIndex: number;
   integrity: number;
   maxIntegrity: number;
+  codeLifeMass: number;
+  codeLifeBoss?: CodeLifeBossRuntimeHud;
   memoryFragments: number;
   abilities: AbilityId[];
   defeatedBosses: BossId[];
@@ -180,5 +203,10 @@ export interface GameUiPayload {
   chapter: ChapterDef;
   currentBoss?: BossDef;
   abilityNames: string[];
+  lastUnlockedAbility?: {
+    id: AbilityId;
+    name: string;
+  };
+  codeLifeForm?: CodeLifeFormRuntimeHud;
   message: string;
 }

@@ -59,6 +59,102 @@
   background: var(--danger);
 }
 
+.integrity__bar[data-tone="warning"] {
+  background: #ffd56a;
+}
+
+.integrity__bar[data-tone="danger"] {
+  background: #ff365f;
+}
+
+.integrity__bar[data-tone="boss"] {
+  background: #ff6b87;
+}
+
+.hud[data-mode="code-life"] {
+  grid-template-columns: minmax(280px, 1.08fr) minmax(320px, 1.2fr) auto;
+}
+
+.hud[data-mode="code-life"] .hud__primary,
+.hud[data-mode="code-life"] .hud__secondary,
+.hud[data-mode="code-life"] .log-strip {
+  border-color: rgba(96, 255, 216, 0.34);
+  background:
+    linear-gradient(135deg, rgba(13, 4, 9, 0.88), rgba(4, 20, 22, 0.78)),
+    var(--panel);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.42), inset 0 0 22px rgba(96, 255, 216, 0.05);
+}
+
+.hud[data-mode="code-life"] .hud__chapter {
+  color: #f5fff9;
+  text-shadow: 0 0 14px rgba(96, 255, 216, 0.32);
+}
+
+.hud[data-mode="code-life"] .hud__objective,
+.hud[data-mode="code-life"] .hud__boss,
+.hud[data-mode="code-life"] .hud__stats {
+  color: #bdece5;
+}
+
+.code-life-only {
+  display: none;
+}
+
+.hud[data-mode="code-life"] .code-life-only {
+  display: block;
+}
+
+.code-life-meters {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.hud[data-mode="code-life"] .code-life-meters {
+  display: grid;
+}
+
+.code-life-meter {
+  display: grid;
+  gap: 3px;
+  color: #d7fff8;
+  font-size: 11px;
+}
+
+.integrity--mass,
+.integrity--boss {
+  height: 5px;
+  background: rgba(189, 236, 229, 0.12);
+}
+
+.hud__current-ability {
+  margin-top: 5px;
+  color: #eafffa;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.code-life-alert,
+.code-life-devour,
+.code-life-status {
+  grid-column: 1 / 3;
+  color: #d9f7f2;
+  font-size: 12px;
+  min-height: 0;
+}
+
+.code-life-alert:not([hidden]) {
+  color: #ffd6de;
+}
+
+.code-life-devour:not([hidden]) {
+  color: #ffedb5;
+}
+
+.code-life-status:not([hidden]) {
+  color: #9fffea;
+}
+
 .ability-strip {
   display: flex;
   flex-wrap: wrap;
@@ -72,6 +168,73 @@
   color: #dffef9;
   padding: 3px 6px;
   font-size: 12px;
+}
+
+.hud[data-mode="code-life"] .ability-strip span {
+  border-color: rgba(255, 107, 135, 0.38);
+  background: rgba(255, 54, 95, 0.12);
+  color: #fff0f4;
+}
+
+.hud[data-mode="code-life"] .ability-strip span[data-current="true"] {
+  border-color: rgba(96, 255, 216, 0.72);
+  background: rgba(96, 255, 216, 0.18);
+  color: #dffff8;
+}
+
+.hud[data-mode="code-life"] .ability-strip span[data-new="true"] {
+  border-color: rgba(255, 240, 106, 0.82);
+  background: rgba(255, 240, 106, 0.2);
+  color: #fff8c8;
+  box-shadow: 0 0 14px rgba(255, 240, 106, 0.24);
+}
+
+.hud[data-mode="code-life"] .ability-strip span[data-readiness="locked"] {
+  border-color: rgba(255, 85, 116, 0.58);
+  background: rgba(255, 54, 95, 0.18);
+  color: #ffd6de;
+}
+
+.hud[data-mode="code-life"] .ability-strip span[data-readiness="cooldown"],
+.hud[data-mode="code-life"] .ability-strip span[data-readiness="charging"] {
+  border-color: rgba(255, 213, 106, 0.58);
+  background: rgba(255, 213, 106, 0.14);
+  color: #ffedb5;
+}
+
+.hud[data-mode="code-life"] .ability-strip span[data-id="__overflow"] {
+  border-color: rgba(189, 236, 229, 0.38);
+  background: rgba(189, 236, 229, 0.1);
+  color: #d9f7f2;
+}
+
+@media (max-width: 860px) {
+  .hud,
+  .hud[data-mode="code-life"] {
+    inset: 10px 10px auto 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .hud__primary,
+  .hud__secondary {
+    min-width: 0;
+  }
+
+  .hud[data-mode="code-life"] .hud__secondary {
+    grid-column: 1 / 3;
+  }
+
+  .hud__chapter,
+  .hud__objective,
+  .hud__boss,
+  .hud__stats {
+    overflow-wrap: anywhere;
+  }
+
+  .ability-strip span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
 }
 
 .log-strip {
@@ -100,13 +263,32 @@
 .gm-panel {
   position: absolute;
   left: 10px;
-  top: 50%;
+  top: 92px;
   z-index: 40;
   display: grid;
   gap: 8px;
-  width: 156px;
+  width: 148px;
   pointer-events: auto;
-  transform: translateY(-50%);
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.gm-panel[data-open="true"] {
+  pointer-events: auto;
+  opacity: 1 !important;
+  visibility: visible;
+  transform: none;
+}
+
+.gm-panel[data-open="false"] {
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
 }
 
 .gm-panel__field {
@@ -135,7 +317,7 @@
 }
 
 .gm-panel__button {
-  min-height: 36px;
+  min-height: 32px;
   padding: 6px 8px;
   border-color: rgba(255, 213, 106, 0.62);
   background: rgba(12, 10, 4, 0.82);

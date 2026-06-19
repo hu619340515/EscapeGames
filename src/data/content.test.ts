@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { abilities, bosses, chapters, endings } from ".";
 import { GameController } from "../game/simulation/GameController";
-import type { BossId, PlayerCustomization } from "../game/types";
+import type { BossId, CodeLifeBossRuntimeHud, PlayerCustomization } from "../game/types";
 
 const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
 
@@ -103,6 +103,48 @@ describe("full flow smoke", () => {
     expect(controller.state.defeatedBosses).not.toContain("firewall-heart");
     expect(controller.hasAbility("lan-traverse")).toBe(true);
     expect(controller.hasAbility("admin-token-core")).toBe(true);
+  });
+
+  it("tracks CodeLife body mass as runtime state and resets it on GM chapter entry", () => {
+    const controller = new GameController();
+    controller.selectChapterForGm("permanent-delete");
+
+    controller.setCodeLifeMass(9);
+    expect(controller.state.codeLifeMass).toBe(2.85);
+
+    controller.setCodeLifeMass(0.1);
+    expect(controller.state.codeLifeMass).toBe(0.68);
+
+    controller.setCodeLifeMass(1.74);
+    expect(controller.state.codeLifeMass).toBe(1.74);
+
+    controller.selectChapterForGm("trash-mountain");
+    expect(controller.state.codeLifeMass).toBe(1);
+  });
+
+  it("carries realtime CodeLife boss HUD snapshots through payload and clears them on chapter entry", () => {
+    const controller = new GameController();
+    controller.selectChapterForGm("trash-mountain");
+    const snapshot = {
+      id: "gateway-warden",
+      name: "Gateway Warden",
+      hp: 47,
+      maxHp: 160,
+      phaseIndex: 2,
+      phaseCount: 3,
+      phaseLabel: "LAN Door",
+      state: "enraged",
+    } satisfies CodeLifeBossRuntimeHud;
+
+    controller.setCodeLifeBossHud(snapshot);
+
+    expect(controller.state.codeLifeBoss).toEqual(snapshot);
+    expect(controller.payload().state.codeLifeBoss).toEqual(snapshot);
+
+    controller.selectChapterForGm("p-drive");
+
+    expect(controller.state.codeLifeBoss).toBeUndefined();
+    expect(controller.payload().state.codeLifeBoss).toBeUndefined();
   });
 
   it("keeps the wrong gateway locked until an address digit changes", () => {

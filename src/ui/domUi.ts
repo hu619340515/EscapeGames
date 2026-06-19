@@ -43,6 +43,8 @@ export function createDomUi(root: HTMLElement): void {
   root.querySelector('[data-action="reset"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
   root.querySelector('[data-action="reset-ending"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
   root.querySelector('[data-action="gm-reset"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.RESET_RUN));
+  root.querySelector('[data-action="gm-advance"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.GM_ADVANCE_CHAPTER));
+  root.querySelector('[data-action="gm-defeat-boss"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.GM_DEFEAT_BOSS));
   refs.gmChapterSelect.addEventListener("change", () => {
     dispatchUiEvent(UI_EVENTS.SELECT_GM_CHAPTER, { chapterId: refs.gmChapterSelect.value as ChapterId });
   });
@@ -88,6 +90,8 @@ export function createDomUi(root: HTMLElement): void {
     refs.petDraw.hidden = flags.isStarted || !createPetFlow.isPetDrawVisible();
     refs.pause.hidden = !flags.isPaused;
     refs.ending.hidden = !(flags.isEndingChoice || flags.isEnded);
+    refs.gmPanel.dataset.open = "true";
+    refs.gmPanel.setAttribute("aria-hidden", "false");
     const isCoverAnimationActive =
       !flags.isStarted && !createPetFlow.isCreatePetVisible() && !createPetFlow.isPetDrawVisible();
     coverAnimation.setActive(isCoverAnimationActive);

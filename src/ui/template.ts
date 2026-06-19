@@ -19,23 +19,43 @@ export function renderDomUiTemplate(): string {
         <div class="integrity">
           <div class="integrity__bar" data-ref="integrityBar"></div>
         </div>
+        <div class="code-life-meters code-life-only">
+          <div class="code-life-meter">
+            <span data-ref="integrityText"></span>
+          </div>
+          <div class="code-life-meter">
+            <span data-ref="massText"></span>
+            <div class="integrity integrity--mass">
+              <div class="integrity__bar" data-ref="massBar"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="hud__secondary">
         <div class="hud__boss" data-ref="boss"></div>
+        <div class="integrity integrity--boss code-life-only">
+          <div class="integrity__bar" data-ref="bossBar"></div>
+        </div>
+        <div class="hud__current-ability code-life-only" data-ref="currentAbility"></div>
         <div class="hud__stats" data-ref="stats"></div>
         <div class="ability-strip" data-ref="abilities"></div>
       </div>
+      <div class="code-life-alert code-life-only" data-ref="warnings" aria-live="polite"></div>
+      <div class="code-life-devour code-life-only" data-ref="devourPrompt"></div>
+      <div class="code-life-status code-life-only" data-ref="statusLine"></div>
       <div class="log-strip" data-ref="log"></div>
       <button class="icon-button hud__pause" data-action="pause" title="暂停">II</button>
     </div>
 
-    <div class="gm-panel" aria-label="GM">
+    <div class="gm-panel" data-panel="gm" data-open="true" aria-hidden="false" aria-label="GM">
       <label class="gm-panel__field">
         <span>关卡</span>
         <select class="gm-panel__select" data-action="gm-select-chapter" data-ref="gmChapterSelect">
           ${renderGmChapterOptions()}
         </select>
       </label>
+      <button class="gm-panel__button" data-action="gm-advance">&#36339;&#31456;</button>
+      <button class="gm-panel__button" data-action="gm-defeat-boss">&#20987;&#36133;BOSS</button>
       <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="invincible" aria-pressed="false">无敌</button>
       <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="infiniteJump" aria-pressed="false">无限跳跃</button>
       <button class="gm-panel__button gm-panel__button--danger" data-action="gm-reset">重开</button>

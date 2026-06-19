@@ -1160,7 +1160,7 @@ export class GameplayScene extends Phaser.Scene {
     this.time.delayedCall(760, () => {
       lineEvent.remove(false);
       dragLine.destroy();
-      this.controller.enterChapter("permanent-delete", "桌宠被丢进回收站，永久删除流程启动。");
+      this.controller.enterChapter("code-rebirth", "Code rebirth begins.");
       this.rebuildChapter();
       this.emitState();
     });
@@ -1563,7 +1563,7 @@ export class GameplayScene extends Phaser.Scene {
       return false;
     }
     const nextChapter = chapters[this.controller.state.currentChapterIndex + 1];
-    return nextChapter?.id === "permanent-delete";
+    return nextChapter?.id === "code-rebirth";
   }
 
   private completeChapterAdvance(): void {

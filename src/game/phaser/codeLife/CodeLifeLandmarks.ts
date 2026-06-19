@@ -42,7 +42,6 @@ export interface CodeLifeLandmarkPlan {
 const LANDMARK_KINDS: Readonly<Record<ChapterId, CodeLifeLandmarkKind>> = {
   "cursor-hunt": "cursor-desktop",
   "wrong-gateway": "gateway-rift",
-  "permanent-delete": "recycle-mouth",
   "code-rebirth": "rebirth-capsule",
   "trash-mountain": "trash-peak",
   "p-drive": "packet-router",

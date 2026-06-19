@@ -13,11 +13,12 @@ const customization: PlayerCustomization = {
 };
 
 describe("content integrity", () => {
-  it("keeps the full chapter order from chapter 1 to chapter 15", () => {
-    expect(chapters).toHaveLength(15);
-    expect(chapters.map((chapter) => chapter.index)).toEqual(Array.from({ length: 15 }, (_, index) => index + 1));
+  it("keeps the full chapter order from chapter 1 to chapter 14", () => {
+    expect(chapters).toHaveLength(14);
+    expect(chapters.map((chapter) => chapter.index)).toEqual(Array.from({ length: 14 }, (_, index) => index + 1));
     expect(chapters[0].id).toBe("cursor-hunt");
-    expect(chapters[14].id).toBe("dev-board");
+    expect(chapters[2].id).toBe("code-rebirth");
+    expect(chapters[13].id).toBe("dev-board");
   });
 
   it("keeps all 17 bosses in the documented order", () => {
@@ -107,7 +108,7 @@ describe("full flow smoke", () => {
 
   it("tracks CodeLife body mass as runtime state and resets it on GM chapter entry", () => {
     const controller = new GameController();
-    controller.selectChapterForGm("permanent-delete");
+    controller.selectChapterForGm("code-rebirth");
 
     controller.setCodeLifeMass(9);
     expect(controller.state.codeLifeMass).toBe(2.85);

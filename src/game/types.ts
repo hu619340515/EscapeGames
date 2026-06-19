@@ -1,7 +1,6 @@
 export type ChapterId =
   | "cursor-hunt"
   | "wrong-gateway"
-  | "permanent-delete"
   | "code-rebirth"
   | "trash-mountain"
   | "p-drive"

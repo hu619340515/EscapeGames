@@ -12,7 +12,6 @@ import { abilities, bosses, chapters } from "../../../data";
 import type { AbilityId, ChapterId } from "../../types";
 
 const expectedChapterIds = [
-  "permanent-delete",
   "code-rebirth",
   "trash-mountain",
   "p-drive",
@@ -133,7 +132,7 @@ function passageTargetExists(config: CodeLifeChapterConfig, target: string): boo
 }
 
 describe("CodeLife chapter config", () => {
-  it("covers chapter 3 through chapter 15 in order", () => {
+  it("covers chapter 3 through chapter 14 in order", () => {
     expect(CODE_LIFE_CHAPTER_IDS).toEqual(expectedChapterIds);
     expect(codeLifeChapterConfigs.map((config) => config.chapterId)).toEqual(expectedChapterIds);
   });
@@ -270,6 +269,23 @@ describe("CodeLife chapter config", () => {
     expect(getCodeLifeChapterConfig("dev-board").biomassCaches.some((cache) => cache.gate === "material-mark")).toBe(true);
   });
 
+  it("configures code-rebirth as a vertical turret and worm route", () => {
+    const config = getCodeLifeChapterConfig("code-rebirth");
+
+    expect(config.world).toEqual({ width: 2160, height: 3840 });
+    expect(config.spawn).toEqual({ x: 470, y: 3560 });
+    expect(config.exit).toMatchObject({ x: 1170, y: 250, width: 190, height: 150, to: "trash-mountain" });
+    expect(config.backgroundKey).toBe("code-rebirth-bg");
+    expect(config.foregroundKey).toBe("code-rebirth-fg");
+    expect(config.hideSurfaceSprites).toBe(true);
+    expect(config.enemySpawns.filter((spawn) => spawn.kind === "mechanical-worm")).toHaveLength(5);
+    expect(config.enemySpawns.every((spawn) => spawn.requiredForExit && spawn.turretOnly)).toBe(true);
+    expect(config.turrets).toHaveLength(5);
+    expect(config.turrets?.every((turret) => turret.requiredForExit)).toBe(true);
+    expect(new Set(config.turrets?.map((turret) => turret.mount))).toEqual(new Set(["wall", "platform"]));
+    expect(config.turrets?.filter((turret) => turret.mount === "platform")).toHaveLength(3);
+  });
+
   it("gives late device chapters distinct hazard mechanics", () => {
     expect(getCodeLifeChapterConfig("camera-eye").hazards.some((hazard) => hazard.kind === "optic-burn")).toBe(true);
     expect(getCodeLifeChapterConfig("printer-belly").hazards.some((hazard) => hazard.kind === "printer-roller")).toBe(true);
@@ -348,6 +364,14 @@ describe("CodeLife chapter config", () => {
 
       for (const [index, enemySpawn] of config.enemySpawns.entries()) {
         expectPointInBounds(config, enemySpawn, `enemy spawn ${index}`);
+      }
+
+      for (const [index, turret] of config.turrets?.entries() ?? []) {
+        expectPointInBounds(config, turret, `turret ${index}`);
+        expect(turret.range, `${config.chapterId} turret ${index} range`).toBeGreaterThan(0);
+        expect(turret.cooldownMs, `${config.chapterId} turret ${index} cooldown`).toBeGreaterThan(0);
+        expect(turret.projectileSpeed, `${config.chapterId} turret ${index} projectile speed`).toBeGreaterThan(0);
+        expect(turret.damage, `${config.chapterId} turret ${index} damage`).toBeGreaterThan(0);
       }
 
       for (const [index, abilityGate] of config.abilityGates.entries()) {

@@ -198,6 +198,21 @@ export const CODE_LIFE_BOSS_PALETTE: CodeLifeColorPalette = {
   uiAccent: 0xff4f68,
 };
 
+export const CODE_LIFE_REBIRTH_PALETTE: CodeLifeColorPalette = {
+  core: 0x63fff2,
+  membrane: 0x0da2b8,
+  tendon: 0x22e8e0,
+  node: 0x8ffff2,
+  highlight: 0xd8fffb,
+  shadow: 0x02090d,
+  damage: 0xffffff,
+  devour: 0xff4f6d,
+  scan: 0x4df7ff,
+  permission: 0x7cc7ff,
+  bossWeakPoint: 0xff5574,
+  uiAccent: 0x55f2dc,
+};
+
 export const CODE_LIFE_CHAPTER_ATMOSPHERES: Readonly<Record<ChapterId, CodeLifeChapterAtmosphere>> = {
   "cursor-hunt": createAtmosphere({
     chapterId: "cursor-hunt",
@@ -221,27 +236,16 @@ export const CODE_LIFE_CHAPTER_ATMOSPHERES: Readonly<Record<ChapterId, CodeLifeC
     glyphs: NETWORK_GLYPHS,
     overlays: ["packet-rain", "scanlines", "crt-vignette"],
   }),
-  "permanent-delete": createAtmosphere({
-    chapterId: "permanent-delete",
-    mood: "recycle-flesh",
-    backgroundColor: 0x16060b,
-    fogColor: 0x3a0a14,
-    ambientAlpha: 0.34,
-    corruption: 0.5,
-    pulseHz: 1.35,
-    glyphs: RECYCLE_GLYPHS,
-    overlays: ["trash-static", "scanlines", "crt-vignette"],
-  }),
   "code-rebirth": createAtmosphere({
     chapterId: "code-rebirth",
-    mood: "recycle-flesh",
-    backgroundColor: 0x12080b,
-    fogColor: 0x301018,
-    ambientAlpha: 0.3,
-    corruption: 0.42,
-    pulseHz: 1.05,
-    glyphs: RECYCLE_GLYPHS,
-    overlays: ["trash-static", "window-ghosts", "scanlines"],
+    mood: "network-core",
+    backgroundColor: 0x061012,
+    fogColor: 0x0d4148,
+    ambientAlpha: 0.24,
+    corruption: 0.36,
+    pulseHz: 1.16,
+    glyphs: ["0", "1", "01", "10"],
+    overlays: ["packet-rain", "window-ghosts", "scanlines"],
   }),
   "trash-mountain": createAtmosphere({
     chapterId: "trash-mountain",
@@ -367,7 +371,7 @@ export const CODE_LIFE_CHAPTER_ATMOSPHERES: Readonly<Record<ChapterId, CodeLifeC
 };
 
 export function getCodeLifePalette(chapterId: ChapterId, variant: CodeLifePaletteVariant = "stable"): CodeLifeColorPalette {
-  const basePalette = getVariantPalette(variant);
+  const basePalette = chapterId === "code-rebirth" ? getCodeRebirthVariantPalette(variant) : getVariantPalette(variant);
   const atmosphere = CODE_LIFE_CHAPTER_ATMOSPHERES[chapterId];
   const chapterTint = atmosphere.fogColor;
   const tintAmount = atmosphere.mood === "hardware-body" ? 0.16 : atmosphere.mood === "network-core" ? 0.12 : 0.08;
@@ -386,6 +390,49 @@ export function getCodeLifePalette(chapterId: ChapterId, variant: CodeLifePalett
     bossWeakPoint: basePalette.bossWeakPoint,
     uiAccent: basePalette.uiAccent,
   };
+}
+
+function getCodeRebirthVariantPalette(variant: CodeLifePaletteVariant): CodeLifeColorPalette {
+  if (variant === "damaged") {
+    return {
+      ...CODE_LIFE_REBIRTH_PALETTE,
+      core: 0xd8fffb,
+      membrane: 0x087486,
+      tendon: 0x63fff2,
+      node: 0xffffff,
+      damage: 0xffffff,
+      devour: 0xff3344,
+    };
+  }
+  if (variant === "overfed") {
+    return {
+      ...CODE_LIFE_REBIRTH_PALETTE,
+      core: 0x9efff4,
+      membrane: 0x16c8cf,
+      tendon: 0xa0fff8,
+      node: 0xff4f6d,
+      highlight: 0xffffff,
+    };
+  }
+  if (variant === "starving") {
+    return {
+      ...CODE_LIFE_REBIRTH_PALETTE,
+      core: 0x137f8b,
+      membrane: 0x075263,
+      tendon: 0x0faeb8,
+      node: 0x45d8d0,
+      highlight: 0x84fff2,
+    };
+  }
+  if (variant === "boss") {
+    return {
+      ...CODE_LIFE_REBIRTH_PALETTE,
+      bossWeakPoint: 0xff4f6d,
+      devour: 0xff5574,
+      node: 0xff6b7b,
+    };
+  }
+  return CODE_LIFE_REBIRTH_PALETTE;
 }
 
 export function getCodeLifeChapterAtmosphere(chapterId: ChapterId): CodeLifeChapterAtmosphere {

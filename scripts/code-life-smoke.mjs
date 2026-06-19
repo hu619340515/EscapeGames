@@ -13,6 +13,7 @@ const CHAPTERS = (process.env.CODE_LIFE_SMOKE_CHAPTERS ?? "trash-mountain,camera
   .split(",")
   .map((chapter) => chapter.trim())
   .filter(Boolean);
+const BOSSLESS_CODE_LIFE_CHAPTERS = new Set(["code-rebirth"]);
 const VIEWPORTS = [
   { name: "desktop", width: 1280, height: 720, mobile: false },
   { name: "mobile", width: 390, height: 844, mobile: true },
@@ -157,8 +158,10 @@ function assertChapterResult(result) {
     failures.push(`canvas intrinsic is ${JSON.stringify(result.canvasIntrinsic)}`);
   }
   if (result.imageRendering !== "pixelated") failures.push(`imageRendering is ${result.imageRendering}`);
-  if (!result.bossText.includes("WEAK ")) failures.push(`boss text missing weakness: ${result.bossText}`);
-  if (Number.parseFloat(result.bossBarWidth) <= 0) failures.push(`bossBarWidth is ${result.bossBarWidth}`);
+  if (!BOSSLESS_CODE_LIFE_CHAPTERS.has(result.chapterId)) {
+    if (!result.bossText.includes("WEAK ")) failures.push(`boss text missing weakness: ${result.bossText}`);
+    if (Number.parseFloat(result.bossBarWidth) <= 0) failures.push(`bossBarWidth is ${result.bossBarWidth}`);
+  }
   if (result.abilityOverflow) failures.push("ability strip overflowed");
   if (nonDarkRatio < 0.18) failures.push(`nonDarkRatio ${nonDarkRatio.toFixed(3)} too low`);
   if (saturatedRatio < 0.015) failures.push(`saturatedRatio ${saturatedRatio.toFixed(3)} too low`);

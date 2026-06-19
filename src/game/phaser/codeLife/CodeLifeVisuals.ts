@@ -1,5 +1,5 @@
 import type { AbilityId, BossId } from "../../types";
-import type { CodeLifeHazardKind } from "./CodeLifeChapterConfig";
+import type { CodeLifeEnemyKind, CodeLifeHazardKind } from "./CodeLifeChapterConfig";
 
 export function getCodeLifeHazardTextureKey(kind: CodeLifeHazardKind | undefined): string {
   if (kind === "optic-burn") return "pd-hazard-optic";
@@ -24,6 +24,20 @@ export function getCodeLifeBossTextureKey(bossId: BossId | string | undefined): 
   if (bossId === "sync-mother") return "boss-sync-mother";
   if (bossId === "gateway-warden") return "boss-gateway-warden";
   return "boss-core";
+}
+
+export function getCodeLifeEnemyTextureKey(kind: CodeLifeEnemyKind | undefined): string {
+  if (kind === "mechanical-worm") return "code-rebirth-worm";
+  return "pd-process";
+}
+
+export function getCodeLifeTurretTextureKey(mount: "wall" | "platform" | undefined): string {
+  if (mount === "platform") return "code-rebirth-platform-turret";
+  return "code-rebirth-turret";
+}
+
+export function getCodeLifeTurretProjectileTextureKey(): string {
+  return "code-rebirth-projectile";
 }
 
 export function getCodeLifeAbilityGateTextureKey(ability: AbilityId | undefined): string {

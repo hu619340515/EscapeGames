@@ -2,7 +2,7 @@ import { chapters } from "../../data";
 import type { ChapterId, GameState, PlayerCustomization } from "../types";
 
 export const SAVE_KEY = "agent-pet-escape-save-v1";
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 const MIN_CODE_LIFE_MASS = 0.68;
 const MAX_CODE_LIFE_MASS = 2.85;
 
@@ -20,16 +20,15 @@ export function loadSavedRun(): GameState | undefined {
     const parsed = JSON.parse(raw) as Omit<GameState, "customization"> & {
       customization: Partial<PlayerCustomization>;
     };
-    if (parsed.version !== STATE_VERSION) {
+    if (parsed.version !== STATE_VERSION && parsed.version !== 1) {
       return undefined;
     }
 
     const savedCollectibles = parsed.chapterCollectibles as Record<string, number> | undefined;
     const legacyChapterOffset = Object.prototype.hasOwnProperty.call(savedCollectibles ?? {}, "generation") ? 1 : 0;
-    const currentChapterIndex = Math.max(
-      0,
-      Math.min(chapters.length - 1, (parsed.currentChapterIndex ?? 0) - legacyChapterOffset),
-    );
+    const savedChapterIndex = (parsed.currentChapterIndex ?? 0) - legacyChapterOffset;
+    const migratedChapterIndex = parsed.version === 1 ? migrateV1ChapterIndex(savedChapterIndex) : savedChapterIndex;
+    const currentChapterIndex = Math.max(0, Math.min(chapters.length - 1, migratedChapterIndex));
     const chapterCollectibles = createCollectibleRecord();
     for (const chapter of chapters) {
       const count = savedCollectibles?.[chapter.id];
@@ -40,6 +39,7 @@ export function loadSavedRun(): GameState | undefined {
 
     return {
       ...parsed,
+      version: STATE_VERSION,
       currentChapterIndex,
       customization: {
         ...parsed.customization,
@@ -76,6 +76,16 @@ export function hasSavedRun(): boolean {
   } catch {
     return false;
   }
+}
+
+function migrateV1ChapterIndex(index: number): number {
+  if (index <= 1) {
+    return index;
+  }
+  if (index <= 3) {
+    return 2;
+  }
+  return index - 1;
 }
 
 function sanitizeCodeLifeMass(value: unknown): number {

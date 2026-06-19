@@ -1,7 +1,6 @@
 import type { AbilityId, BossId, ChapterId } from "../../types";
 
 export const CODE_LIFE_CHAPTER_IDS = [
-  "permanent-delete",
   "code-rebirth",
   "trash-mountain",
   "p-drive",
@@ -41,6 +40,7 @@ export type CodeLifeHazardKind =
   | "firmware-flash";
 
 export type CodeLifeEnemyKind =
+  | "mechanical-worm"
   | "cleanup-process"
   | "checksum-drone"
   | "index-spider"
@@ -103,6 +103,20 @@ export interface CodeLifeEnemySpawn extends CodeLifePoint {
   readonly kind: CodeLifeEnemyKind;
   readonly count: number;
   readonly patrolRadius: number;
+  readonly requiredForExit?: boolean;
+  readonly turretOnly?: boolean;
+}
+
+export interface CodeLifeTurret extends CodeLifePoint {
+  readonly id: string;
+  readonly label: string;
+  readonly mount: "wall" | "platform";
+  readonly angleDeg: number;
+  readonly range: number;
+  readonly cooldownMs: number;
+  readonly projectileSpeed: number;
+  readonly damage: number;
+  readonly requiredForExit?: boolean;
 }
 
 export interface CodeLifeAbilityGate extends CodeLifeRect {
@@ -130,12 +144,16 @@ export interface CodeLifeChapterConfig {
   readonly world: CodeLifeWorld;
   readonly spawn: CodeLifePoint;
   readonly exit: CodeLifeExit;
+  readonly backgroundKey?: string;
+  readonly foregroundKey?: string;
+  readonly hideSurfaceSprites?: boolean;
   readonly gripSurfaces: readonly CodeLifeGripSurface[];
   readonly hazards: readonly CodeLifeHazard[];
   readonly vents: readonly CodeLifePassage[];
   readonly fileShells: readonly CodeLifePassage[];
   readonly biomassCaches: readonly CodeLifeBiomassCache[];
   readonly enemySpawns: readonly CodeLifeEnemySpawn[];
+  readonly turrets?: readonly CodeLifeTurret[];
   readonly abilityGates: readonly CodeLifeAbilityGate[];
   readonly bossIds: readonly BossId[];
   readonly bossArena?: CodeLifeBossArena;
@@ -191,99 +209,73 @@ const deviceAccents: CodeLifeColorAccents = {
 };
 
 export const codeLifeChapterConfigs = {
-  "permanent-delete": {
-    chapterId: "permanent-delete",
-    world: { width: 3200, height: 1500 },
-    spawn: { x: 160, y: 1220 },
-    exit: { x: 2980, y: 120, width: 160, height: 190, label: "shredder casing split", to: "code-rebirth" },
-    gripSurfaces: [
-      { x: 70, y: 960, width: 520, height: 44, kind: "floor", label: "crushed prompt ribs" },
-      { x: 450, y: 760, width: 60, height: 360, kind: "wall", label: "zip shell teeth" },
-      { x: 700, y: 430, width: 760, height: 44, kind: "ceiling", label: "delete dialog upper lip" },
-      { x: 1180, y: 1040, width: 580, height: 54, kind: "floor", label: "broken filename shelf" },
-      { x: 1580, y: 610, width: 56, height: 500, kind: "wall", label: "progress bar spine" },
-      { x: 2020, y: 360, width: 680, height: 42, kind: "ceiling", label: "confirm-delete brow" },
-      { x: 2500, y: 820, width: 540, height: 52, kind: "floor", label: "log shard ledge" },
-      { x: 2860, y: 220, width: 70, height: 560, kind: "wall", label: "outer casing crack" },
-    ],
-    hazards: [
-      { x: 820, y: 1030, width: 260, height: 180, kind: "shredder", label: "recycle grinder", damage: 34 },
-      { x: 1420, y: 210, width: 180, height: 360, kind: "delete-scan", label: "countdown tongue", damage: 22 },
-      { x: 2160, y: 940, width: 340, height: 140, kind: "shredder", label: "file digestor wheel", damage: 40 },
-      { x: 2680, y: 500, width: 260, height: 220, kind: "delete-scan", label: "modal eye sweep", damage: 24 },
-    ],
-    vents: [
-      { x: 520, y: 1110, width: 90, height: 80, label: "compression seam", to: "delete dialog upper lip" },
-      { x: 1710, y: 860, width: 84, height: 84, label: "progress duct", gate: "infiltrate", to: "delete dialog back" },
-      { x: 2860, y: 430, width: 96, height: 82, label: "casing needle gap", gate: "infiltrate", to: "exit crack" },
-    ],
-    fileShells: [
-      { x: 350, y: 350, width: 170, height: 150, label: "corrupt png husk", to: "safe shell pocket" },
-      { x: 1280, y: 1160, width: 180, height: 130, label: "old zip carapace", gate: "coil", to: "broken filename shelf" },
-      { x: 2320, y: 660, width: 190, height: 150, label: "logfile exoshell", to: "log shard ledge" },
-    ],
-    biomassCaches: [
-      { x: 260, y: 890, width: 86, height: 86, label: "prompt clot", biomass: 2 },
-      { x: 1040, y: 350, width: 92, height: 92, label: "cache blister", biomass: 3 },
-      { x: 1780, y: 980, width: 90, height: 90, label: "cleanup remains", biomass: 2, gate: "devour-code" },
-      { x: 2700, y: 760, width: 98, height: 98, label: "compressed memory pulp", biomass: 3 },
-    ],
-    enemySpawns: [
-      { x: 760, y: 980, kind: "cleanup-process", count: 2, patrolRadius: 280 },
-      { x: 1420, y: 520, kind: "checksum-drone", count: 1, patrolRadius: 220 },
-      { x: 2360, y: 860, kind: "cleanup-process", count: 3, patrolRadius: 320 },
-    ],
-    abilityGates: [
-      { x: 620, y: 960, width: 140, height: 140, ability: "cling", label: "first tendril pull" },
-      { x: 1540, y: 830, width: 130, height: 130, ability: "infiltrate", label: "broken file shell drill" },
-      { x: 2220, y: 860, width: 150, height: 150, ability: "devour-code", label: "cleanup process meal" },
-    ],
-    bossIds: [],
-    colorAccents: recycleAccents,
-  },
   "code-rebirth": {
     chapterId: "code-rebirth",
-    world: { width: 2600, height: 1200 },
-    spawn: { x: 170, y: 980 },
-    exit: { x: 2380, y: 210, width: 140, height: 170, label: "trash slope ascent", to: "trash-mountain" },
+    world: { width: 2160, height: 3840 },
+    spawn: { x: 470, y: 3560 },
+    exit: { x: 1170, y: 250, width: 190, height: 150, label: "trash-mountain uplink", to: "trash-mountain" },
+    backgroundKey: "code-rebirth-bg",
+    foregroundKey: "code-rebirth-fg",
+    hideSurfaceSprites: true,
     gripSurfaces: [
-      { x: 60, y: 940, width: 520, height: 48, kind: "floor", label: "heap basin floor" },
-      { x: 390, y: 720, width: 420, height: 42, kind: "floor", label: "old code slab" },
-      { x: 720, y: 420, width: 52, height: 380, kind: "wall", label: "variable-name wall" },
-      { x: 980, y: 250, width: 640, height: 42, kind: "ceiling", label: "comment canopy" },
-      { x: 1380, y: 760, width: 520, height: 46, kind: "floor", label: "cache bridge" },
-      { x: 1780, y: 470, width: 58, height: 410, kind: "wall", label: "bracket root" },
-      { x: 2030, y: 360, width: 350, height: 44, kind: "rail", label: "stable tendril rail" },
-      { x: 2240, y: 790, width: 260, height: 48, kind: "floor", label: "rebirth ledge" },
+      { x: 260, y: 3640, width: 620, height: 70, kind: "floor", label: "rebirth basin floor" },
+      { x: 420, y: 3220, width: 90, height: 430, kind: "wall", label: "boot vein wall" },
+      { x: 680, y: 3060, width: 540, height: 58, kind: "floor", label: "syntax scaffold" },
+      { x: 1240, y: 2780, width: 92, height: 440, kind: "wall", label: "compiled spine" },
+      { x: 900, y: 2620, width: 560, height: 58, kind: "floor", label: "worm staging shelf" },
+      { x: 500, y: 2300, width: 90, height: 430, kind: "wall", label: "variable ladder wall" },
+      { x: 640, y: 2150, width: 600, height: 58, kind: "rail", label: "cache artery rail" },
+      { x: 1320, y: 1840, width: 88, height: 430, kind: "wall", label: "brace root wall" },
+      { x: 1000, y: 1680, width: 560, height: 58, kind: "floor", label: "turret balcony shelf" },
+      { x: 520, y: 1370, width: 90, height: 420, kind: "wall", label: "comment shaft wall" },
+      { x: 640, y: 1210, width: 610, height: 58, kind: "rail", label: "infiltration rail" },
+      { x: 1360, y: 900, width: 88, height: 420, kind: "wall", label: "permission root wall" },
+      { x: 980, y: 760, width: 620, height: 58, kind: "floor", label: "worm kill shelf" },
+      { x: 600, y: 520, width: 90, height: 360, kind: "wall", label: "final climb wall" },
+      { x: 930, y: 410, width: 500, height: 56, kind: "floor", label: "trash-mountain approach" },
     ],
     hazards: [
-      { x: 650, y: 980, width: 280, height: 100, kind: "cache-sludge", label: "stale cache mire", damage: 12 },
-      { x: 1220, y: 850, width: 220, height: 160, kind: "delete-scan", label: "unstable parse flash", damage: 18 },
-      { x: 1990, y: 620, width: 190, height: 180, kind: "cache-sludge", label: "memory leak pool", damage: 14 },
+      { x: 720, y: 3340, width: 260, height: 130, kind: "cache-sludge", label: "stale cache sump", damage: 12 },
+      { x: 1110, y: 2420, width: 260, height: 160, kind: "delete-scan", label: "unstable parse flash", damage: 18 },
+      { x: 660, y: 1540, width: 230, height: 160, kind: "cache-sludge", label: "leaking heap pool", damage: 14 },
+      { x: 1230, y: 620, width: 240, height: 150, kind: "delete-scan", label: "exit checksum sweep", damage: 18 },
     ],
     vents: [
-      { x: 760, y: 810, width: 84, height: 84, label: "nested temp duct", to: "comment canopy" },
-      { x: 1680, y: 380, width: 82, height: 88, label: "bracket slit", gate: "infiltrate", to: "rebirth ledge" },
+      { x: 540, y: 3270, width: 90, height: 90, label: "boot vein duct", to: "syntax scaffold" },
+      { x: 590, y: 2250, width: 88, height: 92, label: "cache artery slit", gate: "infiltrate", to: "cache artery rail" },
+      { x: 1260, y: 1120, width: 92, height: 90, label: "permission root duct", gate: "infiltrate", to: "worm kill shelf" },
     ],
     fileShells: [
-      { x: 500, y: 560, width: 160, height: 130, label: "temp file hide", to: "basin floor" },
-      { x: 1480, y: 610, width: 170, height: 130, label: "compiled husk", gate: "coil", to: "cache bridge" },
-      { x: 2110, y: 220, width: 150, height: 120, label: "old prompt capsule", to: "trash slope ascent" },
+      { x: 135, y: 3460, width: 160, height: 130, label: "zero one shell", to: "rebirth basin floor" },
+      { x: 1010, y: 2470, width: 170, height: 130, label: "compiled husk", gate: "coil", to: "worm staging shelf" },
+      { x: 1070, y: 580, width: 160, height: 120, label: "old prompt capsule", to: "trash-mountain uplink" },
     ],
     biomassCaches: [
-      { x: 320, y: 870, width: 84, height: 84, label: "syntax marrow", biomass: 2 },
-      { x: 950, y: 610, width: 86, height: 86, label: "prompt echo clot", biomass: 2 },
-      { x: 1570, y: 700, width: 90, height: 90, label: "rebuilt code node", biomass: 3 },
-      { x: 2210, y: 680, width: 88, height: 88, label: "stable cache heart", biomass: 3 },
+      { x: 120, y: 3530, width: 84, height: 84, label: "syntax marrow", biomass: 2 },
+      { x: 980, y: 2860, width: 86, height: 86, label: "prompt echo clot", biomass: 2 },
+      { x: 720, y: 2050, width: 90, height: 90, label: "rebuilt code node", biomass: 3 },
+      { x: 1100, y: 1500, width: 88, height: 88, label: "stable cache heart", biomass: 3 },
+      { x: 1030, y: 690, width: 88, height: 88, label: "worm logic marrow", biomass: 3, gate: "devour-code" },
     ],
     enemySpawns: [
-      { x: 900, y: 780, kind: "cleanup-process", count: 2, patrolRadius: 260 },
-      { x: 1840, y: 720, kind: "checksum-drone", count: 1, patrolRadius: 240 },
+      { x: 910, y: 2920, kind: "mechanical-worm", count: 1, patrolRadius: 260, requiredForExit: true, turretOnly: true },
+      { x: 1320, y: 2540, kind: "mechanical-worm", count: 1, patrolRadius: 240, requiredForExit: true, turretOnly: true },
+      { x: 720, y: 1980, kind: "mechanical-worm", count: 1, patrolRadius: 270, requiredForExit: true, turretOnly: true },
+      { x: 1240, y: 1500, kind: "mechanical-worm", count: 1, patrolRadius: 260, requiredForExit: true, turretOnly: true },
+      { x: 1070, y: 690, kind: "mechanical-worm", count: 1, patrolRadius: 230, requiredForExit: true, turretOnly: true },
+    ],
+    turrets: [
+      { id: "rebirth-turret-01", x: 720, y: 3026, label: "boot vein platform turret", mount: "platform", angleDeg: -52, range: 650, cooldownMs: 980, projectileSpeed: 520, damage: 6, requiredForExit: true },
+      { id: "rebirth-turret-02", x: 1280, y: 2900, label: "compiled spine wall turret", mount: "wall", angleDeg: 200, range: 690, cooldownMs: 1040, projectileSpeed: 540, damage: 6, requiredForExit: true },
+      { id: "rebirth-turret-03", x: 760, y: 2116, label: "cache artery platform turret", mount: "platform", angleDeg: -24, range: 700, cooldownMs: 920, projectileSpeed: 560, damage: 7, requiredForExit: true },
+      { id: "rebirth-turret-04", x: 1406, y: 1390, label: "permission root wall turret", mount: "wall", angleDeg: 212, range: 680, cooldownMs: 980, projectileSpeed: 550, damage: 7, requiredForExit: true },
+      { id: "rebirth-turret-05", x: 1130, y: 726, label: "uplink crown platform turret", mount: "platform", angleDeg: 82, range: 620, cooldownMs: 1100, projectileSpeed: 530, damage: 8, requiredForExit: true },
     ],
     abilityGates: [
-      { x: 690, y: 390, width: 110, height: 260, ability: "cling", label: "wall cling calibration" },
-      { x: 1430, y: 580, width: 170, height: 150, ability: "coil", label: "drag loose cache" },
-      { x: 2050, y: 170, width: 170, height: 150, ability: "devour-code", label: "consume old prompt" },
+      { x: 390, y: 3190, width: 150, height: 210, ability: "cling", label: "wall cling calibration" },
+      { x: 1010, y: 2460, width: 170, height: 150, ability: "coil", label: "drag loose cache" },
+      { x: 600, y: 2190, width: 150, height: 150, ability: "infiltrate", label: "shell infiltration drill" },
+      { x: 1010, y: 650, width: 170, height: 150, ability: "devour-code", label: "consume worm logic" },
     ],
     bossIds: [],
     colorAccents: trashAccents,

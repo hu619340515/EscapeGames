@@ -5,7 +5,6 @@ import { createCodeLifeLandmarkPlan, getCodeLifeLandmarkKinds } from "./CodeLife
 const chapterIds = [
   "cursor-hunt",
   "wrong-gateway",
-  "permanent-delete",
   "code-rebirth",
   "trash-mountain",
   "p-drive",

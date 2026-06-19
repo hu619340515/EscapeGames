@@ -14,6 +14,14 @@ import recycleMouthUrl from "../../../素材/回收站/recycle_monster_mouth.png
 import catSpritesheetUrl from "../../../素材/第一章/cat_spritesheet_run6_image2.png";
 import pandaSpritesheetUrl from "../../../素材/第一章/panda_spritesheet_run6_image2.png";
 import pigSpritesheetUrl from "../../../素材/第一章/pig_spritesheet_run6_image2.png";
+import codeRebirthBackgroundUrl from "../../../素材/第三章/背景/code-rebirth-vertical-background.png";
+import codeRebirthForegroundUrl from "../../../素材/第三章/前景/code-rebirth-vertical-foreground.png";
+import codeRebirthWormUrl from "../../../素材/第三章/敌人/code-rebirth-mechanical-worm.png";
+import codeRebirthPlatformTurretUrl from "../../../素材/第三章/机关/code-rebirth-platform-turret.png";
+import codeRebirthTurretUrl from "../../../素材/第三章/机关/code-rebirth-turret.png";
+import codeRebirthProjectileUrl from "../../../素材/第三章/特效/code-rebirth-turret-projectile.png";
+import codeRebirthInfectionSparksUrl from "../../../素材/第三章/特效/code-rebirth-infection-sparks.png";
+import codeRebirthLifeformUrl from "../../../素材/第三章/主角/code-rebirth-lifeform-generated.png";
 import { createPixelTextures } from "./createPixelTextures";
 import { GameplayScene } from "./GameplayScene";
 import {
@@ -40,6 +48,14 @@ export class BootScene extends Phaser.Scene {
     this.load.image("wrong-gateway-digit-base", wrongGatewayDigitBaseUrl);
     this.load.image("wrong-gateway-separator", wrongGatewaySeparatorUrl);
     this.load.image("wrong-gateway-portal", wrongGatewayPortalUrl);
+    this.load.image("code-rebirth-bg", codeRebirthBackgroundUrl);
+    this.load.image("code-rebirth-fg", codeRebirthForegroundUrl);
+    this.load.image("code-rebirth-worm", codeRebirthWormUrl);
+    this.load.image("code-rebirth-turret", codeRebirthTurretUrl);
+    this.load.image("code-rebirth-platform-turret", codeRebirthPlatformTurretUrl);
+    this.load.image("code-rebirth-projectile", codeRebirthProjectileUrl);
+    this.load.image("code-rebirth-infection-sparks", codeRebirthInfectionSparksUrl);
+    this.load.image("code-rebirth-lifeform", codeRebirthLifeformUrl);
     this.load.image("recycle-mouth", recycleMouthUrl);
     this.load.spritesheet(PET_SPRITE_TEXTURE_KEYS.pig, pigSpritesheetUrl, {
       frameWidth: PET_SPRITE_FRAME_WIDTH,

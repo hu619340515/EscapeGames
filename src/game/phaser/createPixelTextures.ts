@@ -189,6 +189,7 @@ export function createPixelTextures(scene: Phaser.Scene): void {
   createCodeLifeHazardTextures(g);
   createCodeLifeBossTextures(g);
   createCodeLifeGateTextures(g);
+  createCodeRebirthCombatTextures(g);
 
   g.clear();
   g.fillStyle(0x061712, 1);
@@ -425,6 +426,76 @@ function createCodeLifeGateTextures(g: Phaser.GameObjects.Graphics): void {
   createGateTexture(g, "pd-gate-vision", 0xffef9a, "eye");
   createGateTexture(g, "pd-gate-network", 0x7affea, "net");
   createGateTexture(g, "pd-gate-permission", 0xb9ccff, "lock");
+}
+
+function createCodeRebirthCombatTextures(g: Phaser.GameObjects.Graphics): void {
+  if (!g.scene.textures.exists("code-rebirth-worm")) {
+    g.clear();
+    g.fillStyle(0x13060a, 1);
+    g.fillEllipse(44, 24, 78, 30);
+    g.fillStyle(0xd92732, 0.98);
+    for (let index = 0; index < 6; index += 1) {
+      g.fillRoundedRect(8 + index * 12, 13 + (index % 2) * 2, 16, 22, 5);
+    }
+    g.fillStyle(0xff6b3f, 0.95);
+    g.fillCircle(24, 22, 3);
+    g.fillCircle(48, 23, 3);
+    g.fillStyle(0x5c0008, 0.95);
+    g.fillCircle(73, 22, 4);
+    g.lineStyle(2, 0x1b0b0d, 0.9);
+    for (let index = 0; index < 6; index += 1) {
+      const x = 12 + index * 12;
+      g.lineBetween(x, 34, x - 6, 42);
+      g.lineBetween(x + 5, 34, x + 10, 42);
+    }
+    g.lineStyle(1, 0x55f2dc, 0.55);
+    g.lineBetween(18, 13, 26, 9);
+    g.lineBetween(54, 14, 62, 10);
+    g.generateTexture("code-rebirth-worm", 88, 44);
+  }
+
+  if (!g.scene.textures.exists("code-rebirth-turret")) {
+    g.clear();
+    g.fillStyle(0x0b1118, 1);
+    g.fillRoundedRect(8, 12, 18, 60, 7);
+    g.fillStyle(0x22303a, 1);
+    g.fillRoundedRect(22, 24, 38, 30, 8);
+    g.fillStyle(0x52f2e4, 0.95);
+    g.fillCircle(38, 39, 8);
+    g.fillStyle(0x7c8798, 1);
+    g.fillRect(50, 35, 36, 8);
+    g.fillStyle(0xff4f6d, 0.85);
+    g.fillCircle(18, 20, 3);
+    g.generateTexture("code-rebirth-turret", 96, 80);
+  }
+
+  if (!g.scene.textures.exists("code-rebirth-platform-turret")) {
+    g.clear();
+    g.fillStyle(0x0b1118, 1);
+    g.fillRoundedRect(24, 49, 42, 15, 6);
+    g.fillStyle(0x22303a, 1);
+    g.fillRoundedRect(28, 24, 34, 28, 8);
+    g.fillStyle(0x52f2e4, 0.95);
+    g.fillCircle(43, 38, 8);
+    g.fillStyle(0x7c8798, 1);
+    g.fillRect(54, 34, 28, 8);
+    g.lineStyle(2, 0x55f2dc, 0.5);
+    g.lineBetween(32, 55, 18, 66);
+    g.lineBetween(58, 55, 72, 66);
+    g.generateTexture("code-rebirth-platform-turret", 88, 72);
+  }
+
+  if (!g.scene.textures.exists("code-rebirth-projectile")) {
+    g.clear();
+    g.fillStyle(0xe9ffff, 1);
+    g.fillEllipse(42, 16, 26, 14);
+    g.fillStyle(0x25f2ff, 0.9);
+    g.fillEllipse(36, 16, 36, 10);
+    g.fillStyle(0x55f2dc, 0.65);
+    g.fillRect(4, 13, 26, 3);
+    g.fillRect(10, 19, 18, 2);
+    g.generateTexture("code-rebirth-projectile", 64, 32);
+  }
 }
 
 function createGateTexture(g: Phaser.GameObjects.Graphics, key: string, color: number, motif: string): void {

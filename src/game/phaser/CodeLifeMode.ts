@@ -22,6 +22,7 @@ import {
   type CodeLifeEnemyKind,
   type CodeLifeHazardKind,
   type CodeLifeRect,
+  type CodeLifeTurret,
 } from "./codeLife/CodeLifeChapterConfig";
 import { getCodeLifeAudioPatch, triggerCodeLifeAudio, type CodeLifeSfxId } from "./codeLife/CodeLifeAudio";
 import { createCodeLifeAmbienceMix, type CodeLifeAmbienceMix } from "./codeLife/CodeLifeAudioState";
@@ -39,7 +40,18 @@ import {
 } from "./codeLife/CodeLifeForm";
 import { createCodeLifeHazardRuntime, isCodeLifeHazardTargetExposed } from "./codeLife/CodeLifeHazardMechanics";
 import { createCodeLifeLandmarkPlan, type CodeLifeLandmarkPlan } from "./codeLife/CodeLifeLandmarks";
-import { getCodeLifeAbilityGateTextureKey, getCodeLifeBossTextureKey, getCodeLifeHazardTextureKey } from "./codeLife/CodeLifeVisuals";
+import {
+  getCodeLifeAbilityGateTextureKey,
+  getCodeLifeBossTextureKey,
+  getCodeLifeEnemyTextureKey,
+  getCodeLifeHazardTextureKey,
+  getCodeLifeTurretProjectileTextureKey,
+  getCodeLifeTurretTextureKey,
+} from "./codeLife/CodeLifeVisuals";
+import {
+  computeCodeLifeCarrionLocomotion,
+  type CodeLifeCarrionLocomotionOutput,
+} from "./codeLife/locomotion";
 import {
   createCodeLifeBodyArtRecipe,
   createCodeLifeGlyphParticle,
@@ -63,6 +75,7 @@ const VOICEPRINT_SPOOF_MS = 2200;
 const MAX_MATERIAL_MARKS = 3;
 const MIN_MASS = 0.68;
 const MAX_MASS = 2.85;
+const TURRET_CONTROL_MS = 6000;
 
 const FALLBACK_GLYPHS = ["0", "1", "let", "fn", "/tmp", "ERR", "{}", "agent", "null", "grep", "pid", "while"];
 const SENSE_ABILITY_IDS: readonly AbilityId[] = ["ping-sense", "reverse-index", "vision-takeover"];
@@ -77,7 +90,7 @@ const TRAVERSE_ABILITY_IDS: readonly AbilityId[] = [
 const VERSION_SPLIT_DEFAULT_FORM: CodeLifeVersionFormId = "packet";
 const VERSION_SPLIT_PACKET_FORM: CodeLifeVersionFormId = "packet";
 
-type GripKind = "surface" | "anchor" | "gate" | "shell" | "enemy" | "cache";
+type GripKind = "surface" | "anchor" | "gate" | "shell" | "enemy" | "cache" | "turret";
 interface CodeLifeModeOptions {
   controller: GameController;
   cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -93,6 +106,7 @@ interface CodeLifeModeOptions {
 interface ActiveTendril {
   target: Phaser.GameObjects.GameObject & { x: number; y: number; active: boolean };
   kind: GripKind;
+  targetPoint?: { x: number; y: number };
 }
 
 interface LayoutRect {
@@ -133,6 +147,22 @@ interface EnemyLayout {
   hp: number;
   kind: CodeLifeEnemyKind;
   patrolRadius: number;
+  requiredForExit?: boolean;
+  turretOnly?: boolean;
+}
+
+interface TurretLayout {
+  x: number;
+  y: number;
+  id: string;
+  label: string;
+  mount: CodeLifeTurret["mount"];
+  angleDeg: number;
+  range: number;
+  cooldownMs: number;
+  projectileSpeed: number;
+  damage: number;
+  requiredForExit?: boolean;
 }
 
 interface AbilityGateLayout extends LayoutRect {
@@ -157,6 +187,7 @@ interface ChapterLayout {
   caches: CacheLayout[];
   shells: LayoutRect[];
   enemies: EnemyLayout[];
+  turrets: TurretLayout[];
 }
 
 interface AmbienceNodes {
@@ -182,11 +213,15 @@ export class CodeLifeMode {
   private caches!: Phaser.Physics.Arcade.StaticGroup;
   private shells!: Phaser.Physics.Arcade.StaticGroup;
   private enemies!: Phaser.Physics.Arcade.Group;
+  private turrets!: Phaser.Physics.Arcade.StaticGroup;
+  private turretProjectiles!: Phaser.Physics.Arcade.Group;
   private exit!: Phaser.Physics.Arcade.Sprite;
   private overlayGraphics!: Phaser.GameObjects.Graphics;
   private hazardGraphics!: Phaser.GameObjects.Graphics;
   private bodyGraphics!: Phaser.GameObjects.Graphics;
   private tendrilGraphics!: Phaser.GameObjects.Graphics;
+  private codeRebirthLifeform?: Phaser.GameObjects.Image;
+  private codeRebirthLifeformGlow?: Phaser.GameObjects.Image;
   private codeGlyphs: Phaser.GameObjects.Text[] = [];
   private gateLabels: Phaser.GameObjects.Text[] = [];
   private materialMarks: Phaser.Physics.Arcade.Sprite[] = [];
@@ -195,6 +230,8 @@ export class CodeLifeMode {
   private nodes: CodeFluidNode[] = [];
   private chapterGlyphs: readonly string[] = FALLBACK_GLYPHS;
   private activeTendril?: ActiveTendril;
+  private lastLocomotion?: CodeLifeCarrionLocomotionOutput;
+  private activeTurret?: Phaser.Physics.Arcade.Sprite;
   private mass = 1;
   private stealthUntil = 0;
   private nextAttackAt = 0;
@@ -248,9 +285,11 @@ export class CodeLifeMode {
     this.caches = this.scene.physics.add.staticGroup();
     this.shells = this.scene.physics.add.staticGroup();
     this.enemies = this.scene.physics.add.group({ allowGravity: false });
+    this.turrets = this.scene.physics.add.staticGroup();
+    this.turretProjectiles = this.scene.physics.add.group({ allowGravity: false });
     this.overlayGraphics = this.scene.add.graphics().setDepth(-8);
     this.hazardGraphics = this.scene.add.graphics().setDepth(12);
-    this.bodyGraphics = this.scene.add.graphics().setDepth(24);
+    this.bodyGraphics = this.scene.add.graphics().setDepth(25);
     this.tendrilGraphics = this.scene.add.graphics().setDepth(27);
 
     this.createSurfaces();
@@ -260,15 +299,17 @@ export class CodeLifeMode {
     this.createCaches();
     this.createShells();
     this.createEnemies();
+    this.createTurrets();
     this.createCore();
+    this.createCodeRebirthLifeformSprite();
     this.createExit();
     this.createCodeGlyphs();
     this.createCollisions();
 
     this.scene.cameras.main.startFollow(this.core, true, 0.12, 0.12);
     this.options.controller.note(
-      this.chapter.id === "permanent-delete"
-        ? "粉碎结束。你不再是桌宠，而是一团会爬行、吞噬、重组的流体代码。"
+      this.chapter.id === "code-rebirth"
+        ? "粉碎过场结束。按住左键像红怪一样贴着废墟爬行，右键伸出交互触须，入侵小炮台清理红色蠕虫病毒。"
         : `${this.chapter.shortTitle} 已载入。代码肉体继续扩张，寻找下一处可寄生出口。`,
       true,
     );
@@ -276,6 +317,7 @@ export class CodeLifeMode {
   }
 
   update(time: number, deltaMs = 1000 / 60): void {
+    this.updateTurretControl(time);
     this.updateMovement();
     this.updateTendril();
     this.updateFluid(deltaMs);
@@ -316,6 +358,8 @@ export class CodeLifeMode {
     this.colliders = [];
     this.nodes = [];
     this.activeTendril = undefined;
+    this.activeTurret = undefined;
+    this.lastLocomotion = undefined;
     for (const glyph of this.codeGlyphs) {
       glyph.destroy();
     }
@@ -325,6 +369,10 @@ export class CodeLifeMode {
     }
     this.gateLabels = [];
     this.materialMarks = [];
+    this.codeRebirthLifeform?.destroy();
+    this.codeRebirthLifeformGlow?.destroy();
+    this.codeRebirthLifeform = undefined;
+    this.codeRebirthLifeformGlow = undefined;
     this.clearBossUi();
     this.overlayGraphics?.clear();
     this.hazardGraphics?.clear();
@@ -366,12 +414,33 @@ export class CodeLifeMode {
     this.nodes = this.fluidBody.getNodes();
   }
 
+  private createCodeRebirthLifeformSprite(): void {
+    if (this.chapter.id !== "code-rebirth") {
+      return;
+    }
+
+    this.codeRebirthLifeformGlow = this.scene.add
+      .image(this.core.x, this.core.y, "code-rebirth-lifeform")
+      .setOrigin(0.5, 0.56)
+      .setDepth(23)
+      .setAlpha(0.16)
+      .setTint(0x26efe6);
+    this.codeRebirthLifeformGlow.setBlendMode(Phaser.BlendModes.ADD);
+
+    this.codeRebirthLifeform = this.scene.add
+      .image(this.core.x, this.core.y, "code-rebirth-lifeform")
+      .setOrigin(0.5, 0.56)
+      .setDepth(24)
+      .setAlpha(0.98);
+  }
+
   private createSurfaces(): void {
     for (const surfaceLayout of this.layout.surfaces) {
       const surface = this.surfaces.create(surfaceLayout.x, surfaceLayout.y, "pd-file-block") as Phaser.Physics.Arcade.Sprite;
       surface.setDisplaySize(surfaceLayout.width, surfaceLayout.height);
       surface.setTint(surfaceLayout.tint ?? this.chapter.palette.platform);
-      surface.setAlpha(0.86);
+      surface.setAlpha(this.layout.config?.hideSurfaceSprites ? 0 : 0.86);
+      surface.setVisible(!this.layout.config?.hideSurfaceSprites);
       surface.setData("label", surfaceLayout.label ?? "grip-surface");
       surface.refreshBody();
     }
@@ -528,7 +597,17 @@ export class CodeLifeMode {
 
   private createEnemies(): void {
     for (const enemyLayout of this.layout.enemies) {
-      this.spawnEnemy(enemyLayout.x, enemyLayout.y, enemyLayout.hp, enemyLayout.kind, enemyLayout.patrolRadius);
+      this.spawnEnemy(
+        enemyLayout.x,
+        enemyLayout.y,
+        enemyLayout.hp,
+        enemyLayout.kind,
+        enemyLayout.patrolRadius,
+        {
+          requiredForExit: enemyLayout.requiredForExit,
+          turretOnly: enemyLayout.turretOnly,
+        },
+      );
     }
     this.spawnCurrentBoss();
   }
@@ -539,12 +618,15 @@ export class CodeLifeMode {
     hp: number,
     kind: CodeLifeEnemyKind | "boss" = "cleanup-process",
     patrolRadius = 260,
+    flags: { requiredForExit?: boolean; turretOnly?: boolean } = {},
   ): Phaser.Physics.Arcade.Sprite {
-    const enemy = this.enemies.create(x, y, kind === "boss" ? "boss-core" : "pd-process") as Phaser.Physics.Arcade.Sprite;
+    const enemy = this.enemies.create(x, y, kind === "boss" ? "boss-core" : getCodeLifeEnemyTextureKey(kind)) as Phaser.Physics.Arcade.Sprite;
     enemy.setDepth(kind === "boss" ? 18 : 16);
     enemy.setData("hp", hp);
     enemy.setData("maxHp", hp);
     enemy.setData("kind", kind);
+    enemy.setData("requiredForExit", flags.requiredForExit === true);
+    enemy.setData("turretOnly", flags.turretOnly === true);
     enemy.setData("grabbedUntil", 0);
     enemy.setData("homeX", x);
     enemy.setData("homeY", y);
@@ -554,7 +636,7 @@ export class CodeLifeMode {
     enemy.setCollideWorldBounds(true);
     enemy.setTint(this.getEnemyTint(kind));
     if (kind !== "boss") {
-      enemy.setDisplaySize(42, 34);
+      enemy.setDisplaySize(kind === "mechanical-worm" ? 34 : 42, kind === "mechanical-worm" ? 18 : 34);
       this.setCombatState(
         enemy,
         createEnemyState(
@@ -563,11 +645,11 @@ export class CodeLifeMode {
             name: kind.replaceAll("-", " "),
             hp,
             color: this.getEnemyTint(kind),
-            patrolSpeed: 58,
-            alertSpeed: 126,
-            slamStunForce: 70,
-            biteDamage: Math.max(3, Math.ceil(hp * 0.38)),
-            mass: kind === "permission-sentinel" || kind === "gpio-warden" ? 1.35 : 1,
+            patrolSpeed: kind === "mechanical-worm" ? 30 : 58,
+            alertSpeed: kind === "mechanical-worm" ? 46 : 126,
+            slamStunForce: kind === "mechanical-worm" ? 24 : 70,
+            biteDamage: kind === "mechanical-worm" ? 2 : Math.max(3, Math.ceil(hp * 0.38)),
+            mass: kind === "mechanical-worm" ? 0.42 : kind === "permission-sentinel" || kind === "gpio-warden" ? 1.35 : 1,
           },
           { x, y },
         ),
@@ -575,8 +657,34 @@ export class CodeLifeMode {
     }
     const body = enemy.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
-    body.setSize(kind === "boss" ? 76 : 34, kind === "boss" ? 58 : 30);
+    body.setSize(kind === "boss" ? 76 : kind === "mechanical-worm" ? 26 : 34, kind === "boss" ? 58 : kind === "mechanical-worm" ? 14 : 30);
     return enemy;
+  }
+
+  private createTurrets(): void {
+    for (const turretLayout of this.layout.turrets) {
+      const turret = this.turrets.create(
+        turretLayout.x,
+        turretLayout.y,
+        getCodeLifeTurretTextureKey(turretLayout.mount),
+      ) as Phaser.Physics.Arcade.Sprite;
+      turret.setDepth(15);
+      turret.setDisplaySize(turretLayout.mount === "platform" ? 48 : 44, turretLayout.mount === "platform" ? 40 : 36);
+      turret.setTint(0xbffcff);
+      turret.setAlpha(0.92);
+      turret.setAngle(turretLayout.angleDeg);
+      turret.setData("id", turretLayout.id);
+      turret.setData("label", turretLayout.label);
+      turret.setData("mount", turretLayout.mount);
+      turret.setData("range", turretLayout.range);
+      turret.setData("cooldownMs", turretLayout.cooldownMs);
+      turret.setData("projectileSpeed", turretLayout.projectileSpeed);
+      turret.setData("damage", turretLayout.damage);
+      turret.setData("requiredForExit", turretLayout.requiredForExit === true);
+      turret.setData("invadedUntil", 0);
+      turret.setData("nextFireAt", 0);
+      turret.refreshBody();
+    }
   }
 
   private spawnCurrentBoss(): void {
@@ -645,7 +753,25 @@ export class CodeLifeMode {
       }),
     );
     this.colliders.push(
+      this.scene.physics.add.overlap(this.core, this.turrets, (_, turret) => {
+        const turretSprite = turret as Phaser.Physics.Arcade.Sprite;
+        const lastPromptAt = (turretSprite.getData("lastPromptAt") as number | undefined) ?? 0;
+        if (this.scene.time.now - lastPromptAt < 1200) {
+          return;
+        }
+        turretSprite.setData("lastPromptAt", this.scene.time.now);
+        this.options.controller.note("按 L 入侵小炮台，鼠标瞄准，左键发射清理红色蠕虫病毒。");
+        this.options.onStateChanged();
+      }),
+    );
+    this.colliders.push(
       this.scene.physics.add.overlap(this.core, this.exit, () => {
+        const requiredWorms = this.getRemainingRequiredWorms();
+        if (requiredWorms > 0) {
+          this.options.controller.note(`还有 ${requiredWorms} 只红色蠕虫病毒在啃食重生路径，先入侵小炮台清理它们。`);
+          this.options.onStateChanged();
+          return;
+        }
         if (!this.options.controller.canExitChapter()) {
           const boss = this.options.controller.currentBoss();
           this.options.controller.note(boss ? `必须先吞噬 ${boss.name}。` : "出口仍被锁定。");
@@ -661,6 +787,11 @@ export class CodeLifeMode {
           return;
         }
         this.options.onExit();
+      }),
+    );
+    this.colliders.push(
+      this.scene.physics.add.overlap(this.turretProjectiles, this.enemies, (projectile, enemy) => {
+        this.handleTurretProjectileHit(projectile as Phaser.Physics.Arcade.Sprite, enemy as Phaser.Physics.Arcade.Sprite);
       }),
     );
     this.colliders.push(
@@ -707,15 +838,16 @@ export class CodeLifeMode {
   }
 
   private createCodeGlyphs(): void {
-    const count = Phaser.Math.Clamp(18 + this.options.controller.state.abilities.length, 18, 32);
+    const count =
+      this.chapter.id === "code-rebirth" ? 13 : Phaser.Math.Clamp(18 + this.options.controller.state.abilities.length, 18, 32);
     for (let index = 0; index < count; index += 1) {
       const glyph = this.scene.add
         .text(this.core.x, this.core.y, this.chapterGlyphs[index % this.chapterGlyphs.length] ?? "0", {
           color: "#7dffd7",
           fontFamily: "Consolas, monospace",
-          fontSize: `${10 + (index % 3) * 2}px`,
+          fontSize: this.chapter.id === "code-rebirth" ? `${10 + (index % 2) * 3}px` : `${10 + (index % 3) * 2}px`,
         })
-        .setAlpha(0.72)
+        .setAlpha(this.chapter.id === "code-rebirth" ? 0.5 : 0.72)
         .setDepth(26);
       glyph.setBlendMode(Phaser.BlendModes.ADD);
       this.codeGlyphs.push(glyph);
@@ -724,16 +856,40 @@ export class CodeLifeMode {
 
   private drawBackdrop(): void {
     const atmosphere = getCodeLifeChapterAtmosphere(this.chapter.id);
-    const tileKey = this.chapter.id === "permanent-delete" ? "pd-background" : themeTileKeys[this.chapter.theme];
+    const backgroundKey = this.layout.config?.backgroundKey;
+    if (backgroundKey) {
+      this.scene.add
+        .image(this.worldWidth / 2, this.worldHeight / 2, backgroundKey)
+        .setDisplaySize(this.worldWidth, this.worldHeight)
+        .setDepth(-30);
+
+      if (this.layout.config?.foregroundKey) {
+        this.scene.add
+          .image(this.worldWidth / 2, this.worldHeight / 2, this.layout.config.foregroundKey)
+          .setDisplaySize(this.worldWidth, this.worldHeight)
+          .setDepth(26);
+      }
+
+      this.scene.add
+        .text(38, 30, this.chapter.title, {
+          color: "#e9fbff",
+          fontFamily: "Microsoft YaHei UI, sans-serif",
+          fontSize: "22px",
+          fontStyle: "bold",
+          stroke: "#04070d",
+          strokeThickness: 5,
+        })
+        .setScrollFactor(0)
+        .setDepth(60);
+      return;
+    }
+
+    const tileKey = themeTileKeys[this.chapter.theme];
     this.scene.add
       .tileSprite(this.worldWidth / 2, this.worldHeight / 2, this.worldWidth, this.worldHeight, tileKey)
       .setDepth(-30)
       .setTint(atmosphere.fogColor)
       .setAlpha(0.34 + atmosphere.ambientAlpha * 0.24);
-
-    if (this.chapter.id === "permanent-delete") {
-      this.scene.add.image(1780, 540, "recycle-mouth").setScale(0.28).setAlpha(0.58).setDepth(2);
-    }
     this.drawChapterLandmark();
 
     for (let x = 80; x < this.worldWidth; x += 150) {
@@ -906,27 +1062,62 @@ export class CodeLifeMode {
 
   private updateMovement(): void {
     const body = this.core.body as Phaser.Physics.Arcade.Body;
-    const form = this.getFormState();
-    body.setVelocity(body.velocity.x * CORE_DRAG * form.dragScale, body.velocity.y * CORE_DRAG * form.dragScale);
+    const pointer = this.scene.input.activePointer;
 
-    const left = this.options.cursors.left.isDown || this.options.keys.a.isDown;
-    const right = this.options.cursors.right.isDown || this.options.keys.d.isDown;
-    const up = this.options.cursors.up.isDown || this.options.keys.w.isDown || this.options.keys.space.isDown;
-    const down = this.options.cursors.down.isDown || this.options.keys.s.isDown;
-    const acceleration = DRIFT_ACCELERATION * form.accelerationScale;
+    if (this.activeTurret?.active) {
+      body.setVelocity(0, 0);
+      this.lastLocomotion = undefined;
+      return;
+    }
 
-    if (left) body.velocity.x -= acceleration;
-    if (right) body.velocity.x += acceleration;
-    if (up) body.velocity.y -= acceleration;
-    if (down) body.velocity.y += acceleration;
+    const result = computeCodeLifeCarrionLocomotion(
+      {
+        body: {
+          center: { x: this.core.x, y: this.core.y },
+          velocity: { x: body.velocity.x, y: body.velocity.y },
+          mass: this.mass,
+          nodes: this.nodes.map((node) => ({
+            x: node.x,
+            y: node.y,
+            vx: node.vx,
+            vy: node.vy,
+            radius: node.radius,
+          })),
+        },
+        pointerTarget: { x: pointer.worldX, y: pointer.worldY },
+        isPrimaryDown: pointer.leftButtonDown(),
+        gripSurfaces: this.layout.surfaces.map((surface, index) => ({
+          id: surface.label ?? index,
+          x: surface.x - surface.width / 2,
+          y: surface.y - surface.height / 2,
+          width: surface.width,
+          height: surface.height,
+        })),
+        dtMs: this.scene.game.loop.delta,
+      },
+      {
+        baseMaxSpeed: 470 * this.getFormState().accelerationScale,
+        maxGripDistance: 430 + this.mass * 20,
+        airSpeedLimit: 38,
+        airAcceleration: 62,
+      },
+    );
+
+    this.lastLocomotion = result;
+    body.setVelocity(result.nextVelocity.x, result.nextVelocity.y);
+    this.scene.cameras.main.setFollowOffset(
+      -result.leadingDirection.x * Phaser.Math.Clamp(result.tractionStrength * 46, 0, 120),
+      -result.leadingDirection.y * Phaser.Math.Clamp(result.tractionStrength * 32, 0, 90),
+    );
   }
 
   private updateTendril(): void {
     const pointer = this.scene.input.activePointer;
-    if (!pointer.leftButtonDown()) {
+    this.tendrilGraphics.clear();
+    this.drawLocomotionTendrils();
+
+    if (!pointer.rightButtonDown()) {
       this.activeTendril = undefined;
-      this.fluidBody?.clearTendril();
-      this.tendrilGraphics.clear();
       return;
     }
 
@@ -944,20 +1135,20 @@ export class CodeLifeMode {
     }
 
     const target = this.activeTendril.target;
-    const distance = Phaser.Math.Distance.Between(this.core.x, this.core.y, target.x, target.y);
+    const targetPoint = this.activeTendril.targetPoint ?? { x: target.x, y: target.y };
+    const distance = Phaser.Math.Distance.Between(this.core.x, this.core.y, targetPoint.x, targetPoint.y);
     if (distance > TENDRIL_RANGE * 1.45) {
       this.activeTendril = undefined;
       this.fluidBody?.clearTendril();
-      this.tendrilGraphics.clear();
       return;
     }
 
     const form = this.getFormState();
     this.fluidBody.startTendril(
-      { x: target.x, y: target.y },
+      targetPoint,
       (this.activeTendril.kind === "enemy" ? 1.35 : 1.05) * form.tendrilStrengthScale,
     );
-    this.drawTendrils(target.x, target.y, distance);
+    this.drawTendrilStrands(targetPoint.x, targetPoint.y, distance, this.activeTendril.kind === "enemy" ? 5 : 3, 1);
     if (this.activeTendril.kind === "enemy") {
       const enemy = target as Phaser.Physics.Arcade.Sprite;
       const combat = this.getCombatState(enemy);
@@ -978,8 +1169,15 @@ export class CodeLifeMode {
       return;
     }
 
+    if (this.activeTendril.kind === "turret") {
+      const turret = target as Phaser.Physics.Arcade.Sprite;
+      turret.setTint(0x95fff1);
+      turret.setData("lastTouchedAt", this.scene.time.now);
+      return;
+    }
+
     const pull = Phaser.Math.Clamp(distance * 2.25 * form.tendrilStrengthScale, 130, 650);
-    this.scene.physics.moveToObject(this.core, target, pull);
+    this.scene.physics.moveTo(this.core, targetPoint.x, targetPoint.y, pull);
   }
 
   private findGripTarget(worldX: number, worldY: number): ActiveTendril | undefined {
@@ -992,6 +1190,10 @@ export class CodeLifeMode {
       ...this.shells.getChildren().map((object) => ({ kind: "shell" as const, target: object as ActiveTendril["target"] })),
       ...this.caches.getChildren().map((object) => ({ kind: "cache" as const, target: object as ActiveTendril["target"] })),
       ...this.surfaces.getChildren().map((object) => ({ kind: "surface" as const, target: object as ActiveTendril["target"] })),
+      ...this.turrets
+        .getChildren()
+        .filter((object) => object.active)
+        .map((object) => ({ kind: "turret" as const, target: object as ActiveTendril["target"] })),
       ...this.enemies
         .getChildren()
         .filter((object) => object.active)
@@ -1001,23 +1203,52 @@ export class CodeLifeMode {
     let best: ActiveTendril | undefined;
     let bestScore = Number.POSITIVE_INFINITY;
     for (const candidate of candidates) {
-      const pointerDistance = Phaser.Math.Distance.Between(worldX, worldY, candidate.target.x, candidate.target.y);
-      const coreDistance = Phaser.Math.Distance.Between(this.core.x, this.core.y, candidate.target.x, candidate.target.y);
+      const targetPoint = this.getTendrilTargetPoint(candidate.target, worldX, worldY, candidate.kind);
+      const pointerDistance = Phaser.Math.Distance.Between(worldX, worldY, targetPoint.x, targetPoint.y);
+      const coreDistance = Phaser.Math.Distance.Between(this.core.x, this.core.y, targetPoint.x, targetPoint.y);
       const score = pointerDistance + coreDistance * 0.2;
       const pointerLimit = candidate.kind === "surface" ? POINTER_GRAB_RADIUS * 1.35 : POINTER_GRAB_RADIUS;
       if (pointerDistance <= pointerLimit && coreDistance <= TENDRIL_RANGE && score < bestScore) {
-        best = candidate;
+        best = { ...candidate, targetPoint };
         bestScore = score;
       }
     }
     return best;
   }
 
+  private getTendrilTargetPoint(
+    target: Phaser.GameObjects.GameObject & { x: number; y: number; active: boolean },
+    worldX: number,
+    worldY: number,
+    kind: GripKind,
+  ): { x: number; y: number } {
+    if (kind !== "surface") {
+      return { x: target.x, y: target.y };
+    }
+    const sprite = target as Phaser.Physics.Arcade.Sprite;
+    const width = sprite.displayWidth || 1;
+    const height = sprite.displayHeight || 1;
+    const left = sprite.x - width / 2;
+    const right = sprite.x + width / 2;
+    const top = sprite.y - height / 2;
+    const bottom = sprite.y + height / 2;
+    const clampedX = Phaser.Math.Clamp(worldX, left, right);
+    const clampedY = Phaser.Math.Clamp(worldY, top, bottom);
+    const edgeDistances = [
+      { x: left, y: clampedY, d: Math.abs(worldX - left) },
+      { x: right, y: clampedY, d: Math.abs(worldX - right) },
+      { x: clampedX, y: top, d: Math.abs(worldY - top) },
+      { x: clampedX, y: bottom, d: Math.abs(worldY - bottom) },
+    ];
+    const closest = edgeDistances.reduce((best, edge) => (edge.d < best.d ? edge : best));
+    return { x: closest.x, y: closest.y };
+  }
+
   private updateFluid(deltaMs: number): void {
     const body = this.core.body as Phaser.Physics.Arcade.Body;
     const tendrilTarget = this.activeTendril
-      ? { x: this.activeTendril.target.x, y: this.activeTendril.target.y }
-      : null;
+      ? (this.activeTendril.targetPoint ?? { x: this.activeTendril.target.x, y: this.activeTendril.target.y })
+      : (this.lastLocomotion?.locomotionTendrils[0]?.target ?? null);
     const move = body.velocity.lengthSq() > 0.1 ? { x: body.velocity.x, y: body.velocity.y } : null;
 
     this.fluidBody.update(
@@ -1027,7 +1258,7 @@ export class CodeLifeMode {
         target: { x: this.core.x, y: this.core.y },
         targetWeight: 1.35,
         traction: tendrilTarget,
-        tractionStrength: this.activeTendril ? 1.25 : 0,
+        tractionStrength: this.activeTendril ? 1.25 : (this.lastLocomotion?.tractionStrength ?? 0),
       },
       { width: this.worldWidth, height: this.worldHeight },
     );
@@ -1381,12 +1612,20 @@ export class CodeLifeMode {
     const hidden = time < this.stealthUntil;
     const recipe = this.createBodyRecipe(hidden);
     const palette = recipe.palette;
+    this.bodyGraphics.clear();
+
+    if (this.chapter.id === "code-rebirth") {
+      this.updateCodeRebirthLifeformSprite(time, hidden, recipe);
+      this.drawCodeRebirthSpriteOverlay(time, hidden, recipe);
+      this.updateCodeGlyphs(time, hidden, palette.node);
+      return;
+    }
+
     const points = this.nodes.map((node) => new Phaser.Geom.Point(node.x, node.y));
     if (points.length < 3) {
       return;
     }
 
-    this.bodyGraphics.clear();
     this.bodyGraphics.setBlendMode(Phaser.BlendModes.NORMAL);
     this.bodyGraphics.fillStyle(palette.shadow, hidden ? 0.16 : 0.28);
     this.bodyGraphics.fillPoints(
@@ -1430,6 +1669,83 @@ export class CodeLifeMode {
     this.updateCodeGlyphs(time, hidden, palette.node);
   }
 
+  private updateCodeRebirthLifeformSprite(
+    time: number,
+    hidden: boolean,
+    recipe: ReturnType<typeof createCodeLifeBodyArtRecipe>,
+  ): void {
+    const visible = !this.activeTurret?.active;
+    this.codeRebirthLifeform?.setVisible(visible);
+    this.codeRebirthLifeformGlow?.setVisible(visible);
+    if (!visible || !this.codeRebirthLifeform || !this.codeRebirthLifeformGlow) {
+      return;
+    }
+
+    const body = this.core.body as Phaser.Physics.Arcade.Body;
+    const speedRatio = Phaser.Math.Clamp(Math.hypot(body.velocity.x, body.velocity.y) / 440, 0, 1);
+    const traction = this.lastLocomotion?.tractionStrength ?? 0;
+    const pulse = 1 + Math.sin(time / 280) * 0.025;
+    const baseWidth = Phaser.Math.Clamp(270 + this.mass * 34 + recipe.glyphDensity * 22, 260, 390);
+    const baseHeight = baseWidth * 0.5;
+    const squashX = 1 + speedRatio * 0.13 + traction * 0.05;
+    const squashY = Phaser.Math.Clamp(pulse - speedRatio * 0.06 + traction * 0.025, 0.88, 1.08);
+    const x = this.core.x + Math.sin(time / 460) * (1.2 + traction * 1.8);
+    const y = this.core.y + baseHeight * 0.1 + Math.cos(time / 360) * 1.4;
+    const alpha = hidden ? 0.36 : 0.98;
+    const rotation = Phaser.Math.Clamp(body.velocity.x / 5200, -0.055, 0.055);
+
+    this.codeRebirthLifeform
+      .setPosition(x, y)
+      .setDisplaySize(baseWidth * squashX, baseHeight * squashY)
+      .setAlpha(alpha)
+      .setRotation(rotation);
+    this.codeRebirthLifeformGlow
+      .setPosition(x, y)
+      .setDisplaySize(baseWidth * squashX * 1.025, baseHeight * squashY * 1.05)
+      .setAlpha(hidden ? 0.05 : 0.08 + recipe.glyphDensity * 0.035)
+      .setRotation(rotation);
+  }
+
+  private drawCodeRebirthSpriteOverlay(
+    time: number,
+    hidden: boolean,
+    recipe: ReturnType<typeof createCodeLifeBodyArtRecipe>,
+  ): void {
+    if (this.activeTurret?.active) {
+      return;
+    }
+
+    const alpha = hidden ? 0.1 : 1;
+    const width = Phaser.Math.Clamp(270 + this.mass * 34 + recipe.glyphDensity * 22, 260, 390);
+    const height = width * 0.5;
+    const left = this.core.x - width * 0.47;
+    const baseY = this.core.y + height * 0.36;
+
+    this.bodyGraphics.setBlendMode(Phaser.BlendModes.ADD);
+    for (let index = 0; index < 18; index += 1) {
+      const seed = index * 17.17;
+      const unit = seededVisualUnit(seed);
+      const wobble = Math.sin(time / 210 + index * 0.91);
+      const x = left + unit * width + wobble * 1.8;
+      const arch = Math.sin(unit * Math.PI);
+      const y =
+        baseY -
+        arch * height * (0.38 + seededVisualUnit(seed + 1.3) * 0.14) +
+        Math.sin(time / 260 + index) * 1.6;
+      const size = 2 + Math.floor(seededVisualUnit(seed + 2.7) * 3);
+      const color = index % 4 === 0 ? 0xa7fff4 : index % 2 === 0 ? 0x15e5df : 0x058da3;
+      this.bodyGraphics.fillStyle(color, (0.055 + arch * 0.085) * alpha);
+      this.bodyGraphics.fillRect(x - size / 2, y - size / 2, size, size);
+    }
+
+    const eyeX = this.core.x + width * 0.035;
+    const eyeY = this.core.y - height * 0.055;
+    const blink = Math.sin(time / 1320) > 0.94 ? 0.56 : 1;
+    this.bodyGraphics.fillStyle(0xe8fffb, 0.28 * alpha * blink);
+    this.bodyGraphics.fillRect(eyeX + height * 0.028, eyeY - height * 0.04, 4, 4);
+    this.bodyGraphics.setBlendMode(Phaser.BlendModes.NORMAL);
+  }
+
   private drawInternalCodeVeins(time: number, hidden: boolean, recipe: ReturnType<typeof createCodeLifeBodyArtRecipe>): void {
     const palette = recipe.palette;
     const integrityRatio = this.options.controller.state.integrity / Math.max(1, this.options.controller.state.maxIntegrity);
@@ -1470,6 +1786,11 @@ export class CodeLifeMode {
   }
 
   private updateCodeGlyphs(time: number, hidden: boolean, color: number): void {
+    if (this.chapter.id === "code-rebirth") {
+      this.updateCodeRebirthGlyphs(time, hidden);
+      return;
+    }
+
     for (let index = 0; index < this.codeGlyphs.length; index += 1) {
       const glyph = this.codeGlyphs[index];
       const node = this.nodes[(index * 2 + Math.floor(time / 1000)) % this.nodes.length];
@@ -1488,30 +1809,77 @@ export class CodeLifeMode {
     }
   }
 
-  private drawTendrils(x: number, y: number, distance: number): void {
-    this.tendrilGraphics.clear();
-    const recipe = this.createBodyRecipe(false);
-    const strandCount = this.activeTendril?.kind === "enemy" ? 5 : 3;
-    for (let strand = 0; strand < strandCount; strand += 1) {
-      const wave = Math.sin(this.scene.time.now / 70 + strand * 1.7) * (12 + strand * 2);
-      const offset = (strand - (strandCount - 1) / 2) * 8;
-      const midX = (this.core.x + x) / 2 + Math.sin(this.scene.time.now / 180 + strand) * 22;
-      const midY = (this.core.y + y) / 2 + wave;
-      this.tendrilGraphics.lineStyle(Math.max(3, recipe.tendrilThicknessPx - strand * 1.6), recipe.palette.shadow, 0.74);
-      this.drawCurve(midX, midY, x + offset, y - offset, distance * 0.012);
-      this.tendrilGraphics.lineStyle(2, strand % 2 === 0 ? recipe.palette.tendon : recipe.palette.node, 0.76);
-      this.drawCurve(midX, midY - 5, x + offset, y - offset, 0);
+  private updateCodeRebirthGlyphs(time: number, hidden: boolean): void {
+    const width = Phaser.Math.Clamp(270 + this.mass * 34, 260, 390);
+    const height = width * 0.5;
+    for (let index = 0; index < this.codeGlyphs.length; index += 1) {
+      const glyph = this.codeGlyphs[index];
+      const unit = seededVisualUnit(index * 11.7);
+      const high = seededVisualUnit(index * 19.3 + 4.1);
+      const sideBias = index % 5 === 0 ? 1.18 : index % 4 === 0 ? -1.08 : 0.86;
+      const driftX = Math.sin(time / (520 + index * 17) + index) * (3 + high * 5);
+      const driftY = Math.cos(time / (620 + index * 23) + index * 0.7) * (2 + unit * 4);
+      const x = this.core.x + (unit - 0.5) * width * sideBias + driftX;
+      const y = this.core.y - height * (0.12 + high * 1.18) + driftY;
+      const text = this.chapterGlyphs[(index + Math.floor(time / 900)) % this.chapterGlyphs.length] ?? (index % 2 === 0 ? "0" : "1");
+      glyph.setText(text);
+      glyph.setPosition(x, y);
+      glyph.setAlpha(hidden ? 0.1 : 0.22 + seededVisualUnit(index + 3.5) * 0.28);
+      glyph.setRotation(Math.sin(time / 480 + index) * 0.08);
+      glyph.setColor(index % 3 === 0 ? "#9ffff6" : "#18e1df");
+      glyph.setShadow(0, 0, "#18f6ef", 5, true, true);
     }
   }
 
-  private drawCurve(controlX: number, controlY: number, endX: number, endY: number, lift: number): void {
-    let previousX = this.core.x;
-    let previousY = this.core.y;
+  private drawTendrils(x: number, y: number, distance: number): void {
+    this.tendrilGraphics.clear();
+    this.drawTendrilStrands(x, y, distance, this.activeTendril?.kind === "enemy" ? 5 : 3, 1);
+  }
+
+  private drawLocomotionTendrils(): void {
+    const locomotion = this.lastLocomotion;
+    if (!locomotion?.locomotionTendrils.length) {
+      return;
+    }
+    const count = Math.min(6, locomotion.locomotionTendrils.length);
+    for (let index = 0; index < count; index += 1) {
+      const tendril = locomotion.locomotionTendrils[index];
+      const distance = Phaser.Math.Distance.Between(tendril.source.x, tendril.source.y, tendril.target.x, tendril.target.y);
+      this.drawTendrilStrands(tendril.target.x, tendril.target.y, distance, 1, 0.42, tendril.source);
+    }
+  }
+
+  private drawTendrilStrands(
+    x: number,
+    y: number,
+    distance: number,
+    strandCount: number,
+    alphaScale: number,
+    source?: { x: number; y: number },
+  ): void {
+    const recipe = this.createBodyRecipe(false);
+    const start = source ?? { x: this.core.x, y: this.core.y };
+    for (let strand = 0; strand < strandCount; strand += 1) {
+      const wave = Math.sin(this.scene.time.now / 70 + strand * 1.7) * (12 + strand * 2);
+      const offset = (strand - (strandCount - 1) / 2) * 8;
+      const midX = (start.x + x) / 2 + Math.sin(this.scene.time.now / 180 + strand) * 22;
+      const midY = (start.y + y) / 2 + wave;
+      this.tendrilGraphics.lineStyle(Math.max(2, recipe.tendrilThicknessPx - strand * 1.6), recipe.palette.shadow, 0.74 * alphaScale);
+      this.drawCurve(midX, midY, x + offset, y - offset, distance * 0.012, start);
+      this.tendrilGraphics.lineStyle(1 + Math.min(2, alphaScale * 2), strand % 2 === 0 ? recipe.palette.tendon : recipe.palette.node, 0.76 * alphaScale);
+      this.drawCurve(midX, midY - 5, x + offset, y - offset, 0, start);
+    }
+  }
+
+  private drawCurve(controlX: number, controlY: number, endX: number, endY: number, lift: number, source?: { x: number; y: number }): void {
+    const start = source ?? { x: this.core.x, y: this.core.y };
+    let previousX = start.x;
+    let previousY = start.y;
     for (let step = 1; step <= 12; step += 1) {
       const t = step / 12;
       const inverse = 1 - t;
-      const x = inverse * inverse * this.core.x + 2 * inverse * t * controlX + t * t * endX;
-      const y = inverse * inverse * this.core.y + 2 * inverse * t * (controlY - lift) + t * t * endY;
+      const x = inverse * inverse * start.x + 2 * inverse * t * controlX + t * t * endX;
+      const y = inverse * inverse * start.y + 2 * inverse * t * (controlY - lift) + t * t * endY;
       this.tendrilGraphics.lineBetween(previousX, previousY, x, y);
       previousX = x;
       previousY = y;
@@ -1543,6 +1911,13 @@ export class CodeLifeMode {
       }
       hitAny = true;
       const isBoss = Boolean(enemy.getData("bossId"));
+      if (enemy.getData("turretOnly")) {
+        enemy.setData("grabbedUntil", time + 460);
+        this.scene.physics.moveTo(enemy, targetX, targetY, 260 * form.tendrilStrengthScale);
+        enemy.setTintFill(0xffffff);
+        this.scene.time.delayedCall(70, () => this.restoreEnemyTint(enemy));
+        continue;
+      }
       const combat = this.getCombatState(enemy);
       if (combat) {
         const slammed = applySlam(combat, {
@@ -1590,6 +1965,15 @@ export class CodeLifeMode {
     const enemy = this.findNearest(this.enemies.getChildren() as Phaser.Physics.Arcade.Sprite[], 124);
     if (enemy) {
       const isBoss = Boolean(enemy.getData("bossId"));
+      if (enemy.getData("turretOnly")) {
+        enemy.setData("grabbedUntil", time + 520);
+        this.scene.physics.moveToObject(enemy, this.core, 120);
+        this.spawnBurst(enemy.x, enemy.y, 0xff4f6d, 10);
+        this.playSfx("permission-gate", 0.42, enemy);
+        this.options.controller.note("红色电脑蠕虫太小又满是病毒壳，普通吞噬只会感染身体；入侵小炮台清理它。");
+        this.options.onStateChanged();
+        return;
+      }
       const combat = this.getCombatState(enemy);
       if (combat) {
         const wasDevourable = isDevourable(combat);
@@ -1767,6 +2151,10 @@ export class CodeLifeMode {
   }
 
   private useInfiltrate(time: number): void {
+    if (this.tryInfiltrateTurret(time)) {
+      return;
+    }
+
     const form = this.getFormState();
     const shell = this.findNearest(this.shells.getChildren() as Phaser.Physics.Arcade.Sprite[], 145);
     if (!shell) {
@@ -1813,6 +2201,135 @@ export class CodeLifeMode {
     this.options.controller.interactBias(1);
     this.options.controller.note("流体代码压成一条薄线，钻进损坏文件壳，扫描暂时丢失目标。");
     this.options.onStateChanged();
+  }
+
+  private tryInfiltrateTurret(time: number): boolean {
+    const linkedTurret =
+      this.activeTendril?.kind === "turret" && this.activeTendril.target.active
+        ? (this.activeTendril.target as Phaser.Physics.Arcade.Sprite)
+        : undefined;
+    const turret = linkedTurret ?? this.findNearest(this.turrets.getChildren() as Phaser.Physics.Arcade.Sprite[], 132);
+    if (!turret) {
+      return false;
+    }
+
+    this.activeTurret = turret;
+    turret.setData("invadedUntil", time + TURRET_CONTROL_MS);
+    turret.setData("nextFireAt", time + 120);
+    turret.setTint(0x95fff1);
+    turret.setAlpha(1);
+    this.core.setPosition(turret.x, turret.y);
+    this.core.setVelocity(0, 0);
+    this.stealthUntil = Math.max(this.stealthUntil, time + TURRET_CONTROL_MS);
+    this.fluidBody.reset({ x: turret.x, y: turret.y }, Math.max(MIN_MASS, this.mass * 0.72));
+    this.spawnBurst(turret.x, turret.y, 0x95fff1, 18);
+    this.playSfx("device-overload", 0.72, turret);
+    this.options.controller.interactBias(0.6);
+    this.options.controller.note("已入侵小炮台。鼠标瞄准，左键发射，右键脱离。");
+    this.options.onStateChanged();
+    return true;
+  }
+
+  private updateTurretControl(time: number): void {
+    const turret = this.activeTurret;
+    if (!turret?.active) {
+      this.activeTurret = undefined;
+      return;
+    }
+
+    const invadedUntil = (turret.getData("invadedUntil") as number | undefined) ?? 0;
+    if (time > invadedUntil) {
+      this.releaseActiveTurret();
+      return;
+    }
+
+    this.core.setPosition(turret.x, turret.y);
+    this.core.setVelocity(0, 0);
+    const pointer = this.scene.input.activePointer;
+    const angle = Phaser.Math.Angle.Between(turret.x, turret.y, pointer.worldX, pointer.worldY);
+    turret.setRotation(angle);
+
+    if (pointer.leftButtonDown()) {
+      this.fireActiveTurret(time, turret, angle);
+    }
+  }
+
+  private releaseActiveTurret(): void {
+    const turret = this.activeTurret;
+    if (!turret) {
+      return;
+    }
+    turret.setData("invadedUntil", 0);
+    turret.setTint(0xbffcff);
+    this.activeTurret = undefined;
+    this.stealthUntil = Math.max(this.stealthUntil, this.scene.time.now + 420);
+    this.spawnBurst(turret.x, turret.y, 0x95fff1, 10);
+  }
+
+  private fireActiveTurret(time: number, turret: Phaser.Physics.Arcade.Sprite, angle: number): void {
+    const nextFireAt = (turret.getData("nextFireAt") as number | undefined) ?? 0;
+    if (time < nextFireAt) {
+      return;
+    }
+    const cooldownMs = (turret.getData("cooldownMs") as number | undefined) ?? 1000;
+    const projectileSpeed = (turret.getData("projectileSpeed") as number | undefined) ?? 540;
+    const damage = (turret.getData("damage") as number | undefined) ?? 6;
+    turret.setData("nextFireAt", time + cooldownMs);
+
+    const projectile = this.turretProjectiles.create(
+      turret.x + Math.cos(angle) * 26,
+      turret.y + Math.sin(angle) * 26,
+      getCodeLifeTurretProjectileTextureKey(),
+    ) as Phaser.Physics.Arcade.Sprite;
+    projectile.setDepth(31);
+    projectile.setDisplaySize(18, 10);
+    projectile.setRotation(angle);
+    projectile.setData("damage", damage);
+    projectile.setData("spawnedAt", time);
+    projectile.setData("owner", turret.getData("id"));
+    const projectileBody = projectile.body as Phaser.Physics.Arcade.Body | undefined;
+    projectileBody?.setAllowGravity(false);
+    projectileBody?.setSize(18, 10);
+    projectile.setVelocity(Math.cos(angle) * projectileSpeed, Math.sin(angle) * projectileSpeed);
+    this.spawnBurst(projectile.x, projectile.y, 0x95fff1, 5);
+    this.playSfx("boss-hit", 0.34, turret);
+    this.scene.time.delayedCall(1800, () => {
+      if (projectile.active) {
+        projectile.destroy();
+      }
+    });
+  }
+
+  private handleTurretProjectileHit(projectile: Phaser.Physics.Arcade.Sprite, enemy: Phaser.Physics.Arcade.Sprite): void {
+    if (!projectile.active || !enemy.active) {
+      return;
+    }
+    projectile.destroy();
+    if (enemy.getData("kind") !== "mechanical-worm") {
+      this.spawnBurst(enemy.x, enemy.y, 0x95fff1, 5);
+      return;
+    }
+
+    const damage = (projectile.getData("damage") as number | undefined) ?? 6;
+    const combat = this.getCombatState(enemy);
+    if (combat) {
+      const next = applyHazard(combat, { damage, force: 50, ignoresArmor: true });
+      this.setCombatState(enemy, next);
+      this.emitCombatFeedback(enemy, next);
+      this.spawnBurst(enemy.x, enemy.y, 0xff4f6d, 12);
+      this.playSfx("hurt", 0.5, enemy);
+      if (this.isCombatTerminal(next)) {
+        this.killEnemy(enemy, true);
+      }
+      return;
+    }
+
+    const hp = ((enemy.getData("hp") as number | undefined) ?? 1) - damage;
+    enemy.setData("hp", hp);
+    this.spawnBurst(enemy.x, enemy.y, 0xff4f6d, 12);
+    if (hp <= 0) {
+      this.killEnemy(enemy, true);
+    }
   }
 
   private useSensePulse(time: number): void {
@@ -2027,6 +2544,15 @@ export class CodeLifeMode {
       const bodyDistance = this.getBodyDistanceTo(enemy.x, enemy.y);
       if (latestCombat?.status === "stunned") {
         enemy.setVelocity((enemy.body?.velocity.x ?? 0) * 0.42, (enemy.body?.velocity.y ?? 0) * 0.42);
+      } else if (kind === "mechanical-worm") {
+        if (time < grabbedUntil) {
+          enemy.setVelocity((enemy.body?.velocity.x ?? 0) * 0.78, (enemy.body?.velocity.y ?? 0) * 0.78);
+        } else if (!hidden && distance < 170) {
+          const fleeAngle = Phaser.Math.Angle.Between(this.core.x, this.core.y, enemy.x, enemy.y);
+          enemy.setVelocity(Math.cos(fleeAngle) * 64, Math.sin(fleeAngle) * 42);
+        } else {
+          this.patrolEnemy(enemy, time, latestCombat?.patrolSpeed ?? 30);
+        }
       } else if (time >= grabbedUntil && !hidden) {
         if (isBoss || distance < (isBoss ? 860 : 560)) {
           this.scene.physics.moveToObject(enemy, this.core, latestCombat?.alertSpeed ?? (isBoss ? 92 : 130));
@@ -2046,7 +2572,7 @@ export class CodeLifeMode {
 
       enemy.setAlpha(hidden ? 0.38 : 1);
       if (bodyDistance < (isBoss ? 68 : 44)) {
-        this.damagePlayer(isBoss ? 12 : 7);
+        this.damagePlayer(isBoss ? 12 : kind === "mechanical-worm" ? 2 : 7);
       }
     }
   }
@@ -2504,6 +3030,10 @@ export class CodeLifeMode {
     if (now - lastHazardAt < 520) {
       return;
     }
+    if (enemy.getData("turretOnly")) {
+      enemy.setData("grabbedUntil", now + 240);
+      return;
+    }
 
     const isBoss = Boolean(enemy.getData("bossId"));
     if (isBoss && this.layout.config?.bossArena?.lockUntilDefeated && !this.bossArenaEntered) {
@@ -2686,7 +3216,8 @@ export class CodeLifeMode {
       return;
     }
     enemy.disableBody(true, true);
-    this.spawnBurst(x, y, byHazard ? 0xffd0d8 : 0xff5574, isBoss ? 34 : 26);
+    const wasRequiredWorm = enemy.getData("requiredForExit") === true && enemy.getData("kind") === "mechanical-worm";
+    this.spawnBurst(x, y, wasRequiredWorm ? 0xff4f6d : byHazard ? 0xffd0d8 : 0xff5574, isBoss ? 34 : wasRequiredWorm ? 16 : 26);
 
     if (isBoss) {
       const defeated = this.options.controller.defeatCurrentBoss();
@@ -2709,6 +3240,19 @@ export class CodeLifeMode {
       return;
     }
 
+    if (wasRequiredWorm) {
+      const remaining = this.getRemainingRequiredWorms();
+      if (remaining === 0) {
+        this.spawnBurst(this.layout.exit.x, this.layout.exit.y, this.layout.config?.colorAccents.primary ?? 0x60ffd8, 24);
+        this.playSfx("permission-gate", 0.78, this.layout.exit);
+        this.options.controller.note("最后一只红色电脑蠕虫病毒被小炮台打碎，顶部重生出口已解锁。", true);
+      } else {
+        this.options.controller.note(`红色电脑蠕虫病毒清理完一只，还剩 ${remaining} 只。`);
+      }
+      this.options.onStateChanged();
+      return;
+    }
+
     if (byHazard) {
       const cache = this.caches.create(x, y, "pd-cache") as Phaser.Physics.Arcade.Sprite;
       cache.setScale(0.78);
@@ -2716,6 +3260,15 @@ export class CodeLifeMode {
       cache.setData("biomass", 1);
       cache.refreshBody();
     }
+  }
+
+  private getRemainingRequiredWorms(): number {
+    return this.enemies
+      .getChildren()
+      .filter((object) => {
+        const enemy = object as Phaser.Physics.Arcade.Sprite;
+        return enemy.active && enemy.getData("requiredForExit") === true && enemy.getData("kind") === "mechanical-worm";
+      }).length;
   }
 
   private createBossUi(enemy: Phaser.Physics.Arcade.Sprite, boss: BossDef): void {
@@ -2985,9 +3538,12 @@ export class CodeLifeMode {
             hp: this.getEnemyHp(spawn.kind),
             kind: spawn.kind,
             patrolRadius: spawn.patrolRadius,
+            requiredForExit: spawn.requiredForExit,
+            turretOnly: spawn.turretOnly,
           };
         });
       }),
+      turrets: (config.turrets ?? []).map((turret) => ({ ...turret })),
     };
   }
 
@@ -3072,6 +3628,7 @@ export class CodeLifeMode {
         { x: 1380, y: 640, hp: 5, kind: "checksum-drone", patrolRadius: 250 },
         { x: 2220, y: 610, hp: 5, kind: "cleanup-process", patrolRadius: 250 },
       ],
+      turrets: [],
     };
   }
 
@@ -3091,6 +3648,7 @@ export class CodeLifeMode {
 
   private getEnemyHp(kind: CodeLifeEnemyKind): number {
     const hpByKind: Record<CodeLifeEnemyKind, number> = {
+      "mechanical-worm": 6,
       "cleanup-process": 5,
       "checksum-drone": 6,
       "index-spider": 7,
@@ -3108,6 +3666,7 @@ export class CodeLifeMode {
   private getEnemyTint(kind: CodeLifeEnemyKind | "boss"): number {
     const tintByKind: Record<CodeLifeEnemyKind | "boss", number> = {
       boss: 0xff5574,
+      "mechanical-worm": 0xff3344,
       "cleanup-process": 0xffd0dc,
       "checksum-drone": 0x7affea,
       "index-spider": 0xffcf6b,
@@ -3672,6 +4231,11 @@ function tokenizePassageTarget(label: string): string[] {
 
 function degreesToRadians(degrees: number): number {
   return (degrees / 180) * Math.PI;
+}
+
+function seededVisualUnit(seed: number): number {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
 }
 
 function colorToCss(color: number): string {

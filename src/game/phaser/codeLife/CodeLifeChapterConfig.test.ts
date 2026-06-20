@@ -272,9 +272,9 @@ describe("CodeLife chapter config", () => {
   it("configures code-rebirth as a vertical turret and worm route", () => {
     const config = getCodeLifeChapterConfig("code-rebirth");
 
-    expect(config.world).toEqual({ width: 2160, height: 3840 });
-    expect(config.spawn).toEqual({ x: 470, y: 3560 });
-    expect(config.exit).toMatchObject({ x: 1170, y: 250, width: 190, height: 150, to: "trash-mountain" });
+    expect(config.world).toEqual({ width: 1440, height: 2560 });
+    expect(config.spawn).toEqual({ x: 313, y: 2373 });
+    expect(config.exit).toMatchObject({ x: 780, y: 167, width: 127, height: 100, to: "trash-mountain" });
     expect(config.backgroundKey).toBe("code-rebirth-bg");
     expect(config.foregroundKey).toBe("code-rebirth-fg");
     expect(config.hideSurfaceSprites).toBe(true);

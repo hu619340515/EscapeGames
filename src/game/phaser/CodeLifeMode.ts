@@ -76,6 +76,9 @@ const MAX_MATERIAL_MARKS = 3;
 const MIN_MASS = 0.68;
 const MAX_MASS = 2.85;
 const TURRET_CONTROL_MS = 6000;
+const CODE_REBIRTH_CORE_RADIUS = 18;
+const CODE_REBIRTH_BODY_MIN_WIDTH = 205;
+const CODE_REBIRTH_BODY_MAX_WIDTH = 318;
 
 const FALLBACK_GLYPHS = ["0", "1", "let", "fn", "/tmp", "ERR", "{}", "agent", "null", "grep", "pid", "while"];
 const SENSE_ABILITY_IDS: readonly AbilityId[] = ["ping-sense", "reverse-index", "vision-takeover"];
@@ -220,8 +223,6 @@ export class CodeLifeMode {
   private hazardGraphics!: Phaser.GameObjects.Graphics;
   private bodyGraphics!: Phaser.GameObjects.Graphics;
   private tendrilGraphics!: Phaser.GameObjects.Graphics;
-  private codeRebirthLifeform?: Phaser.GameObjects.Image;
-  private codeRebirthLifeformGlow?: Phaser.GameObjects.Image;
   private codeGlyphs: Phaser.GameObjects.Text[] = [];
   private gateLabels: Phaser.GameObjects.Text[] = [];
   private materialMarks: Phaser.Physics.Arcade.Sprite[] = [];
@@ -301,7 +302,6 @@ export class CodeLifeMode {
     this.createEnemies();
     this.createTurrets();
     this.createCore();
-    this.createCodeRebirthLifeformSprite();
     this.createExit();
     this.createCodeGlyphs();
     this.createCollisions();
@@ -369,10 +369,6 @@ export class CodeLifeMode {
     }
     this.gateLabels = [];
     this.materialMarks = [];
-    this.codeRebirthLifeform?.destroy();
-    this.codeRebirthLifeformGlow?.destroy();
-    this.codeRebirthLifeform = undefined;
-    this.codeRebirthLifeformGlow = undefined;
     this.clearBossUi();
     this.overlayGraphics?.clear();
     this.hazardGraphics?.clear();
@@ -386,52 +382,51 @@ export class CodeLifeMode {
 
   private createCore(): void {
     this.core = this.scene.physics.add.sprite(this.layout.spawn.x, this.layout.spawn.y, "boss-bullet");
+    const isCodeRebirth = this.chapter.id === "code-rebirth";
     this.core.setVisible(false);
-    this.core.setMaxVelocity(440, 440);
-    this.core.setDrag(620, 620);
+    this.core.setMaxVelocity(isCodeRebirth ? 380 : 440, isCodeRebirth ? 380 : 440);
+    this.core.setDrag(isCodeRebirth ? 520 : 620, isCodeRebirth ? 520 : 620);
     this.core.setCollideWorldBounds(true);
     const body = this.core.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
-    body.setCircle(30);
-    body.setOffset(-18, -18);
+    const coreRadius = isCodeRebirth ? CODE_REBIRTH_CORE_RADIUS : 30;
+    body.setCircle(coreRadius);
+    body.setOffset(16 - coreRadius, 16 - coreRadius);
 
     this.fluidBody = new CodeFluidBody(
       { x: this.core.x, y: this.core.y },
-      {
-        mass: this.mass,
-        minMass: MIN_MASS,
-        maxMass: MAX_MASS,
-        baseRadius: 48,
-        nodeCount: 24,
-        minNodeCount: 16,
-        maxNodeCount: 42,
-        targetForce: 980,
-        tendrilForce: 2700,
-        damping: 5.4,
-      },
+      isCodeRebirth
+        ? {
+            mass: this.mass,
+            minMass: MIN_MASS,
+            maxMass: MAX_MASS,
+            baseRadius: 38,
+            nodeCount: 34,
+            minNodeCount: 26,
+            maxNodeCount: 54,
+            targetForce: 720,
+            tendrilForce: 3300,
+            springStiffness: 64,
+            bendStiffness: 14,
+            shapeStiffness: 24,
+            pressureStrength: 72,
+            damping: 4.2,
+          }
+        : {
+            mass: this.mass,
+            minMass: MIN_MASS,
+            maxMass: MAX_MASS,
+            baseRadius: 48,
+            nodeCount: 24,
+            minNodeCount: 16,
+            maxNodeCount: 42,
+            targetForce: 980,
+            tendrilForce: 2700,
+            damping: 5.4,
+          },
     );
     this.syncVersionFormBody();
     this.nodes = this.fluidBody.getNodes();
-  }
-
-  private createCodeRebirthLifeformSprite(): void {
-    if (this.chapter.id !== "code-rebirth") {
-      return;
-    }
-
-    this.codeRebirthLifeformGlow = this.scene.add
-      .image(this.core.x, this.core.y, "code-rebirth-lifeform")
-      .setOrigin(0.5, 0.56)
-      .setDepth(23)
-      .setAlpha(0.16)
-      .setTint(0x26efe6);
-    this.codeRebirthLifeformGlow.setBlendMode(Phaser.BlendModes.ADD);
-
-    this.codeRebirthLifeform = this.scene.add
-      .image(this.core.x, this.core.y, "code-rebirth-lifeform")
-      .setOrigin(0.5, 0.56)
-      .setDepth(24)
-      .setAlpha(0.98);
   }
 
   private createSurfaces(): void {
@@ -729,7 +724,9 @@ export class CodeLifeMode {
   }
 
   private createCollisions(): void {
-    this.colliders.push(this.scene.physics.add.collider(this.core, this.surfaces));
+    if (this.chapter.id !== "code-rebirth") {
+      this.colliders.push(this.scene.physics.add.collider(this.core, this.surfaces));
+    }
     this.colliders.push(this.scene.physics.add.collider(this.enemies, this.surfaces));
     this.colliders.push(
       this.scene.physics.add.collider(
@@ -1615,8 +1612,7 @@ export class CodeLifeMode {
     this.bodyGraphics.clear();
 
     if (this.chapter.id === "code-rebirth") {
-      this.updateCodeRebirthLifeformSprite(time, hidden, recipe);
-      this.drawCodeRebirthSpriteOverlay(time, hidden, recipe);
+      this.drawCodeRebirthFluidBody(time, hidden, recipe);
       this.updateCodeGlyphs(time, hidden, palette.node);
       return;
     }
@@ -1669,44 +1665,7 @@ export class CodeLifeMode {
     this.updateCodeGlyphs(time, hidden, palette.node);
   }
 
-  private updateCodeRebirthLifeformSprite(
-    time: number,
-    hidden: boolean,
-    recipe: ReturnType<typeof createCodeLifeBodyArtRecipe>,
-  ): void {
-    const visible = !this.activeTurret?.active;
-    this.codeRebirthLifeform?.setVisible(visible);
-    this.codeRebirthLifeformGlow?.setVisible(visible);
-    if (!visible || !this.codeRebirthLifeform || !this.codeRebirthLifeformGlow) {
-      return;
-    }
-
-    const body = this.core.body as Phaser.Physics.Arcade.Body;
-    const speedRatio = Phaser.Math.Clamp(Math.hypot(body.velocity.x, body.velocity.y) / 440, 0, 1);
-    const traction = this.lastLocomotion?.tractionStrength ?? 0;
-    const pulse = 1 + Math.sin(time / 280) * 0.025;
-    const baseWidth = Phaser.Math.Clamp(270 + this.mass * 34 + recipe.glyphDensity * 22, 260, 390);
-    const baseHeight = baseWidth * 0.5;
-    const squashX = 1 + speedRatio * 0.13 + traction * 0.05;
-    const squashY = Phaser.Math.Clamp(pulse - speedRatio * 0.06 + traction * 0.025, 0.88, 1.08);
-    const x = this.core.x + Math.sin(time / 460) * (1.2 + traction * 1.8);
-    const y = this.core.y + baseHeight * 0.1 + Math.cos(time / 360) * 1.4;
-    const alpha = hidden ? 0.36 : 0.98;
-    const rotation = Phaser.Math.Clamp(body.velocity.x / 5200, -0.055, 0.055);
-
-    this.codeRebirthLifeform
-      .setPosition(x, y)
-      .setDisplaySize(baseWidth * squashX, baseHeight * squashY)
-      .setAlpha(alpha)
-      .setRotation(rotation);
-    this.codeRebirthLifeformGlow
-      .setPosition(x, y)
-      .setDisplaySize(baseWidth * squashX * 1.025, baseHeight * squashY * 1.05)
-      .setAlpha(hidden ? 0.05 : 0.08 + recipe.glyphDensity * 0.035)
-      .setRotation(rotation);
-  }
-
-  private drawCodeRebirthSpriteOverlay(
+  private drawCodeRebirthFluidBody(
     time: number,
     hidden: boolean,
     recipe: ReturnType<typeof createCodeLifeBodyArtRecipe>,
@@ -1715,34 +1674,139 @@ export class CodeLifeMode {
       return;
     }
 
-    const alpha = hidden ? 0.1 : 1;
-    const width = Phaser.Math.Clamp(270 + this.mass * 34 + recipe.glyphDensity * 22, 260, 390);
-    const height = width * 0.5;
-    const left = this.core.x - width * 0.47;
-    const baseY = this.core.y + height * 0.36;
+    const body = this.core.body as Phaser.Physics.Arcade.Body;
+    const velocity = { x: body.velocity.x, y: body.velocity.y };
+    const velocityLength = Math.hypot(velocity.x, velocity.y);
+    const lastDirection = this.lastLocomotion?.leadingDirection;
+    const direction =
+      velocityLength > 18
+        ? { x: velocity.x / velocityLength, y: velocity.y / velocityLength }
+        : lastDirection && Math.hypot(lastDirection.x, lastDirection.y) > 0.001
+          ? lastDirection
+          : { x: 1, y: 0 };
+    const speedRatio = Phaser.Math.Clamp(velocityLength / 420, 0, 1);
+    const traction = Phaser.Math.Clamp(this.lastLocomotion?.tractionStrength ?? 0, 0, 1.9);
+    const width = Phaser.Math.Clamp(
+      CODE_REBIRTH_BODY_MIN_WIDTH + this.mass * 24 + speedRatio * 42 + traction * 14 + recipe.glyphDensity * 8,
+      CODE_REBIRTH_BODY_MIN_WIDTH,
+      CODE_REBIRTH_BODY_MAX_WIDTH,
+    );
+    const height = Phaser.Math.Clamp(width * (0.38 - speedRatio * 0.035 + traction * 0.018), 72, 124);
+    const breathe = Math.sin(time / 260) * (2.6 + traction * 1.3);
+    const center = {
+      x: this.core.x - direction.x * speedRatio * width * 0.08 + Math.sin(time / 430) * 1.4,
+      y: this.core.y + height * 0.08 + Math.cos(time / 380) * 1.2,
+    };
+    const alpha = hidden ? 0.28 : 1;
+    const transformedNodes = this.nodes.map((node, index) => {
+      const phase = node.phase ?? index / Math.max(1, this.nodes.length);
+      const relative = { x: node.x - this.core.x, y: node.y - this.core.y };
+      const wave = Math.sin(time / 95 + phase * Math.PI * 2);
+      const tailBias = Phaser.Math.Clamp(-relative.x / Math.max(1, width * 0.36), -1, 1);
 
+      return new Phaser.Geom.Point(
+        center.x +
+          relative.x * (1.62 + speedRatio * 0.14) -
+          direction.x * speedRatio * width * 0.07 * tailBias +
+          wave * 2.4,
+        center.y +
+          relative.y * (0.46 - speedRatio * 0.035) +
+          direction.y * speedRatio * height * 0.08 * tailBias +
+          Math.abs(relative.x) * 0.026 +
+          breathe * 0.35,
+      );
+    });
+
+    this.bodyGraphics.setBlendMode(Phaser.BlendModes.NORMAL);
+    this.bodyGraphics.fillStyle(0x02080c, hidden ? 0.16 : 0.32);
+    this.bodyGraphics.fillEllipse(center.x, center.y + height * 0.34, width * 1.02, height * 0.38);
     this.bodyGraphics.setBlendMode(Phaser.BlendModes.ADD);
-    for (let index = 0; index < 18; index += 1) {
-      const seed = index * 17.17;
-      const unit = seededVisualUnit(seed);
-      const wobble = Math.sin(time / 210 + index * 0.91);
-      const x = left + unit * width + wobble * 1.8;
-      const arch = Math.sin(unit * Math.PI);
-      const y =
-        baseY -
-        arch * height * (0.38 + seededVisualUnit(seed + 1.3) * 0.14) +
-        Math.sin(time / 260 + index) * 1.6;
-      const size = 2 + Math.floor(seededVisualUnit(seed + 2.7) * 3);
-      const color = index % 4 === 0 ? 0xa7fff4 : index % 2 === 0 ? 0x15e5df : 0x058da3;
-      this.bodyGraphics.fillStyle(color, (0.055 + arch * 0.085) * alpha);
-      this.bodyGraphics.fillRect(x - size / 2, y - size / 2, size, size);
+    const moundBaseY = center.y + height * 0.27;
+    const moundPoints = [
+      new Phaser.Geom.Point(center.x - width * 0.52, moundBaseY),
+      ...Array.from({ length: 17 }, (_, pointIndex) => {
+        const unit = pointIndex / 16;
+        const arch = Math.sin(unit * Math.PI);
+        const tailDip = Math.abs(unit - 0.5) * height * 0.18;
+        return new Phaser.Geom.Point(
+          center.x - width * 0.5 + unit * width + Math.sin(time / 240 + pointIndex) * 1.4,
+          moundBaseY - arch * height * (0.82 + Math.sin(time / 310) * 0.04) + tailDip,
+        );
+      }),
+      new Phaser.Geom.Point(center.x + width * 0.52, moundBaseY),
+      new Phaser.Geom.Point(center.x + width * 0.42, moundBaseY + height * 0.12),
+      new Phaser.Geom.Point(center.x - width * 0.42, moundBaseY + height * 0.12),
+    ];
+    this.bodyGraphics.fillStyle(0x06384a, 0.38 * alpha);
+    this.bodyGraphics.fillPoints(moundPoints, true);
+    this.bodyGraphics.lineStyle(2, 0x13c7c4, 0.08 * alpha);
+    this.bodyGraphics.strokePoints(moundPoints, true);
+    this.bodyGraphics.fillStyle(0x10b8bf, 0.11 * alpha);
+    this.bodyGraphics.fillEllipse(center.x + direction.x * width * 0.04, center.y - height * 0.13, width * 0.54, height * 0.42);
+
+    if (transformedNodes.length >= 3) {
+      this.bodyGraphics.setBlendMode(Phaser.BlendModes.ADD);
+      this.bodyGraphics.fillStyle(0x075264, 0.52 * alpha);
+      this.bodyGraphics.fillPoints(transformedNodes, true);
+      this.bodyGraphics.lineStyle(5, 0x0b8296, 0.34 * alpha);
+      this.bodyGraphics.strokePoints(transformedNodes, true);
     }
 
-    const eyeX = this.core.x + width * 0.035;
-    const eyeY = this.core.y - height * 0.055;
+    this.bodyGraphics.setBlendMode(Phaser.BlendModes.ADD);
+    for (let index = 0; index < 124; index += 1) {
+      const seed = index * 13.37;
+      const unit = seededVisualUnit(seed) * 2 - 1;
+      const arch = Math.pow(Math.max(0, 1 - Math.abs(unit) ** 1.72), 0.72);
+      const row = seededVisualUnit(seed + 9.4);
+      const axial = unit * width * (0.48 + seededVisualUnit(seed + 2.2) * 0.06);
+      const lateral = (row - 0.5) * height * 0.46 - arch * height * (0.54 + seededVisualUnit(seed + 1.3) * 0.26);
+      const flow = Math.sin(time / (96 + (index % 5) * 18) + index * 0.73);
+      const x = center.x + axial + direction.x * flow * (3 + speedRatio * 5);
+      const y = center.y + lateral + direction.y * flow * (1.4 + speedRatio * 2.6);
+      const size = 2 + Math.floor(seededVisualUnit(seed + 4.8) * 7);
+      const color = index % 6 === 0 ? 0xacfdf4 : index % 3 === 0 ? 0x2df4e6 : index % 2 === 0 ? 0x079fb8 : 0x064f67;
+      this.bodyGraphics.fillStyle(color, (0.22 + arch * 0.44 + seededVisualUnit(seed + 0.8) * 0.14) * alpha);
+      this.bodyGraphics.fillRect(Math.round(x - size / 2), Math.round(y - size / 2), size, size);
+    }
+
+    for (let index = 0; index < 22; index += 1) {
+      const unit = index / 21;
+      const tailLift = Math.sin(time / 130 + index * 0.42) * 2.2;
+      const x = center.x - width * 0.5 + unit * width;
+      const y = center.y + height * 0.24 + tailLift;
+      const color = index % 2 === 0 ? 0x13d2d3 : 0x07596f;
+      this.bodyGraphics.fillStyle(color, (0.34 + Math.sin(time / 180 + index) * 0.08) * alpha);
+      this.bodyGraphics.fillRect(Math.round(x), Math.round(y), 5 + (index % 3), 3);
+    }
+
+    for (const [index, tendril] of (this.lastLocomotion?.locomotionTendrils ?? []).entries()) {
+      if (index >= 5) {
+        break;
+      }
+      const source = transformedNodes[(index * 5) % Math.max(1, transformedNodes.length)] ?? center;
+      this.bodyGraphics.lineStyle(1 + (index % 2), index % 2 === 0 ? 0x0bc8d4 : 0x53fff0, 0.11 * alpha);
+      this.drawCurveOnGraphics(
+        this.bodyGraphics,
+        source,
+        (source.x + tendril.target.x) / 2 + Math.sin(time / 150 + index) * 14,
+        (source.y + tendril.target.y) / 2 + Math.cos(time / 160 + index) * 8,
+        tendril.target.x,
+        tendril.target.y,
+        0,
+      );
+    }
+
+    const eyeX = center.x + direction.x * width * 0.035;
+    const eyeY = center.y - height * 0.08 + direction.y * height * 0.055;
     const blink = Math.sin(time / 1320) > 0.94 ? 0.56 : 1;
-    this.bodyGraphics.fillStyle(0xe8fffb, 0.28 * alpha * blink);
-    this.bodyGraphics.fillRect(eyeX + height * 0.028, eyeY - height * 0.04, 4, 4);
+    this.bodyGraphics.fillStyle(0x7ffff1, 0.24 * alpha);
+    this.bodyGraphics.fillCircle(eyeX, eyeY, height * 0.15);
+    this.bodyGraphics.lineStyle(2, 0xd8fffb, 0.78 * alpha * blink);
+    this.bodyGraphics.strokeCircle(eyeX, eyeY, height * 0.11);
+    this.bodyGraphics.fillStyle(0x03141b, 0.92 * alpha);
+    this.bodyGraphics.fillCircle(eyeX + direction.x * 2, eyeY + direction.y * 2, height * 0.052 * blink);
+    this.bodyGraphics.fillStyle(0xeafffb, 0.95 * alpha * blink);
+    this.bodyGraphics.fillRect(Math.round(eyeX + height * 0.055), Math.round(eyeY - height * 0.06), 4, 4);
     this.bodyGraphics.setBlendMode(Phaser.BlendModes.NORMAL);
   }
 
@@ -1810,7 +1874,7 @@ export class CodeLifeMode {
   }
 
   private updateCodeRebirthGlyphs(time: number, hidden: boolean): void {
-    const width = Phaser.Math.Clamp(270 + this.mass * 34, 260, 390);
+    const width = Phaser.Math.Clamp(CODE_REBIRTH_BODY_MIN_WIDTH + this.mass * 24, CODE_REBIRTH_BODY_MIN_WIDTH, CODE_REBIRTH_BODY_MAX_WIDTH);
     const height = width * 0.5;
     for (let index = 0; index < this.codeGlyphs.length; index += 1) {
       const glyph = this.codeGlyphs[index];
@@ -1873,6 +1937,18 @@ export class CodeLifeMode {
 
   private drawCurve(controlX: number, controlY: number, endX: number, endY: number, lift: number, source?: { x: number; y: number }): void {
     const start = source ?? { x: this.core.x, y: this.core.y };
+    this.drawCurveOnGraphics(this.tendrilGraphics, start, controlX, controlY, endX, endY, lift);
+  }
+
+  private drawCurveOnGraphics(
+    graphics: Phaser.GameObjects.Graphics,
+    start: { x: number; y: number },
+    controlX: number,
+    controlY: number,
+    endX: number,
+    endY: number,
+    lift: number,
+  ): void {
     let previousX = start.x;
     let previousY = start.y;
     for (let step = 1; step <= 12; step += 1) {
@@ -1880,7 +1956,7 @@ export class CodeLifeMode {
       const inverse = 1 - t;
       const x = inverse * inverse * start.x + 2 * inverse * t * controlX + t * t * endX;
       const y = inverse * inverse * start.y + 2 * inverse * t * (controlY - lift) + t * t * endY;
-      this.tendrilGraphics.lineBetween(previousX, previousY, x, y);
+      graphics.lineBetween(previousX, previousY, x, y);
       previousX = x;
       previousY = y;
     }
@@ -3826,7 +3902,16 @@ export class CodeLifeMode {
       return;
     }
     const versionForm = this.getActiveVersionForm();
-    const radius = versionForm === "packet" ? 22 : versionForm === "thread" ? 24 : versionForm === "brute" ? 36 : 30;
+    const radius =
+      this.chapter.id === "code-rebirth"
+        ? CODE_REBIRTH_CORE_RADIUS
+        : versionForm === "packet"
+          ? 22
+          : versionForm === "thread"
+            ? 24
+            : versionForm === "brute"
+              ? 36
+              : 30;
     body.setCircle(radius);
     body.setOffset(16 - radius, 16 - radius);
     if (this.fluidBody) {

@@ -208,8 +208,86 @@ const deviceAccents: CodeLifeColorAccents = {
   ambient: 0x101014,
 };
 
+const CODE_REBIRTH_MAP_SCALE = 2 / 3;
+
+function scaleDistance(value: number, scale: number): number {
+  return Math.max(1, Math.round(value * scale));
+}
+
+function scalePoint<T extends CodeLifePoint>(point: T, scale: number): T {
+  return {
+    ...point,
+    x: scaleDistance(point.x, scale),
+    y: scaleDistance(point.y, scale),
+  };
+}
+
+function scaleRect<T extends CodeLifeRect>(rect: T, scale: number): T {
+  return {
+    ...rect,
+    x: scaleDistance(rect.x, scale),
+    y: scaleDistance(rect.y, scale),
+    width: scaleDistance(rect.width, scale),
+    height: scaleDistance(rect.height, scale),
+  };
+}
+
+function scaleHazard(hazard: CodeLifeHazard, scale: number): CodeLifeHazard {
+  const scaled = {
+    ...scaleRect(hazard, scale),
+  };
+
+  if (!hazard.blindSpotRects) {
+    return scaled;
+  }
+
+  return {
+    ...scaled,
+    blindSpotRects: hazard.blindSpotRects.map((rect) => scaleRect(rect, scale)),
+  };
+}
+
+function scaleBossArena(arena: CodeLifeBossArena | undefined, scale: number): CodeLifeBossArena | undefined {
+  if (!arena) {
+    return undefined;
+  }
+
+  return {
+    ...scaleRect(arena, scale),
+    anchorPoints: arena.anchorPoints.map((point) => scalePoint(point, scale)),
+  };
+}
+
+function scaleCodeRebirthConfig(config: CodeLifeChapterConfig, scale: number): CodeLifeChapterConfig {
+  return {
+    ...config,
+    world: {
+      width: scaleDistance(config.world.width, scale),
+      height: scaleDistance(config.world.height, scale),
+    },
+    spawn: scalePoint(config.spawn, scale),
+    exit: scaleRect(config.exit, scale),
+    gripSurfaces: config.gripSurfaces.map((surface) => scaleRect(surface, scale)),
+    hazards: config.hazards.map((hazard) => scaleHazard(hazard, scale)),
+    vents: config.vents.map((passage) => scaleRect(passage, scale)),
+    fileShells: config.fileShells.map((passage) => scaleRect(passage, scale)),
+    biomassCaches: config.biomassCaches.map((cache) => scaleRect(cache, scale)),
+    enemySpawns: config.enemySpawns.map((spawn) => ({
+      ...scalePoint(spawn, scale),
+      patrolRadius: scaleDistance(spawn.patrolRadius, scale),
+    })),
+    turrets: config.turrets?.map((turret) => ({
+      ...scalePoint(turret, scale),
+      range: scaleDistance(turret.range, scale),
+      projectileSpeed: scaleDistance(turret.projectileSpeed, scale),
+    })),
+    abilityGates: config.abilityGates.map((gate) => scaleRect(gate, scale)),
+    bossArena: scaleBossArena(config.bossArena, scale),
+  };
+}
+
 export const codeLifeChapterConfigs = {
-  "code-rebirth": {
+  "code-rebirth": scaleCodeRebirthConfig({
     chapterId: "code-rebirth",
     world: { width: 2160, height: 3840 },
     spawn: { x: 470, y: 3560 },
@@ -279,7 +357,7 @@ export const codeLifeChapterConfigs = {
     ],
     bossIds: [],
     colorAccents: trashAccents,
-  },
+  }, CODE_REBIRTH_MAP_SCALE),
   "trash-mountain": {
     chapterId: "trash-mountain",
     world: { width: 3600, height: 2200 },

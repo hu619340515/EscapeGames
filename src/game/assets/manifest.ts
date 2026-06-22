@@ -230,6 +230,14 @@ export const assetManifest: AssetManifestEntry[] = [
     description: "Chapter 3 transparent foreground layer aligned to the code-rebirth world.",
   },
   {
+    key: "code-rebirth-bottom-platform",
+    kind: "ui",
+    width: 1440,
+    height: 300,
+    replaceWith: "素材/第三章/地面/code-rebirth-bottom-platform.png",
+    description: "Chapter 3 generated bottom floor platform overlay matching the old vertical code-rebirth artwork.",
+  },
+  {
     key: "code-rebirth-lifeform",
     kind: "sprite",
     width: 1774,
@@ -276,6 +284,57 @@ export const assetManifest: AssetManifestEntry[] = [
     height: 64,
     replaceWith: "素材/第三章/特效/code-rebirth-infection-sparks.png",
     description: "Chapter 3 turret invasion and control-transfer effect strip.",
+  },
+  {
+    key: "trash-mountain-bg",
+    kind: "ui",
+    width: 1440,
+    height: 2600,
+    replaceWith: "素材/第四章/背景/trash-mountain-vertical-background.png",
+    description:
+      "Chapter 4 vertical background layer with recycle-bin debris, archive cliffs, broken desktop windows, and a dark e-waste shaft.",
+  },
+  {
+    key: "trash-mountain-fg",
+    kind: "ui",
+    width: 1440,
+    height: 2600,
+    replaceWith: "素材/第四章/前景/trash-mountain-vertical-foreground.png",
+    description:
+      "Chapter 4 transparent foreground atmosphere layer with side debris, dangling cables, code rain, and recycle silhouettes.",
+  },
+  {
+    key: "trash-mountain-platform-shelf",
+    kind: "tile",
+    width: 768,
+    height: 150,
+    replaceWith: "素材/第四章/平台/trash-mountain-platform-shelf.png",
+    description:
+      "Chapter 4 generated floating shelf art made from old window title bars, e-waste, folders, recycle fragments, and hanging cables.",
+  },
+  {
+    key: "trash-mountain-bottom-platform",
+    kind: "tile",
+    width: 1440,
+    height: 260,
+    replaceWith: "素材/第四章/地面/trash-mountain-bottom-platform.png",
+    description: "Chapter 4 generated bottom garbage-basin platform overlay aligned to the first vertical route collision surface.",
+  },
+  {
+    key: "trash-mountain-my-computer-gate",
+    kind: "ui",
+    width: 256,
+    height: 228,
+    replaceWith: "素材/第四章/网关/trash-mountain-my-computer-gate.png",
+    description: "Chapter 4 custom exit gate toward My Computer, mixing recycle red edge light with cyan LAN portal light.",
+  },
+  {
+    key: "trash-mountain-gateway-warden",
+    kind: "sprite",
+    width: 256,
+    height: 176,
+    replaceWith: "素材/第四章/敌人/trash-mountain-gateway-warden.png",
+    description: "Chapter 4 custom gateway-warden boss sprite, a corrupted monitor core with cyan eye and red malware cracks.",
   },
 ];
 

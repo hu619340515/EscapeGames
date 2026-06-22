@@ -21,6 +21,14 @@ import codeRebirthPlatformTurretUrl from "../../../素材/第三章/机关/code-
 import codeRebirthTurretUrl from "../../../素材/第三章/机关/code-rebirth-turret.png";
 import codeRebirthProjectileUrl from "../../../素材/第三章/特效/code-rebirth-turret-projectile.png";
 import codeRebirthInfectionSparksUrl from "../../../素材/第三章/特效/code-rebirth-infection-sparks.png";
+import codeRebirthLifeformUrl from "../../../素材/第三章/主角/code-rebirth-lifeform-generated.png";
+import codeRebirthBottomPlatformUrl from "../../../素材/第三章/地面/code-rebirth-bottom-platform.png";
+import trashMountainBackgroundUrl from "../../../素材/第四章/背景/trash-mountain-vertical-background.png";
+import trashMountainForegroundUrl from "../../../素材/第四章/前景/trash-mountain-vertical-foreground.png";
+import trashMountainBottomPlatformUrl from "../../../素材/第四章/地面/trash-mountain-bottom-platform.png";
+import trashMountainPlatformShelfUrl from "../../../素材/第四章/平台/trash-mountain-platform-shelf.png";
+import trashMountainGateUrl from "../../../素材/第四章/网关/trash-mountain-my-computer-gate.png";
+import trashMountainGatewayWardenUrl from "../../../素材/第四章/敌人/trash-mountain-gateway-warden.png";
 import { createPixelTextures } from "./createPixelTextures";
 import { GameplayScene } from "./GameplayScene";
 import {
@@ -49,11 +57,19 @@ export class BootScene extends Phaser.Scene {
     this.load.image("wrong-gateway-portal", wrongGatewayPortalUrl);
     this.load.image("code-rebirth-bg", codeRebirthBackgroundUrl);
     this.load.image("code-rebirth-fg", codeRebirthForegroundUrl);
+    this.load.image("code-rebirth-lifeform", codeRebirthLifeformUrl);
+    this.load.image("code-rebirth-bottom-platform", codeRebirthBottomPlatformUrl);
     this.load.image("code-rebirth-worm", codeRebirthWormUrl);
     this.load.image("code-rebirth-turret", codeRebirthTurretUrl);
     this.load.image("code-rebirth-platform-turret", codeRebirthPlatformTurretUrl);
     this.load.image("code-rebirth-projectile", codeRebirthProjectileUrl);
     this.load.image("code-rebirth-infection-sparks", codeRebirthInfectionSparksUrl);
+    this.load.image("trash-mountain-bg", trashMountainBackgroundUrl);
+    this.load.image("trash-mountain-fg", trashMountainForegroundUrl);
+    this.load.image("trash-mountain-bottom-platform", trashMountainBottomPlatformUrl);
+    this.load.image("trash-mountain-platform-shelf", trashMountainPlatformShelfUrl);
+    this.load.image("trash-mountain-my-computer-gate", trashMountainGateUrl);
+    this.load.image("trash-mountain-gateway-warden", trashMountainGatewayWardenUrl);
     this.load.image("recycle-mouth", recycleMouthUrl);
     this.load.spritesheet(PET_SPRITE_TEXTURE_KEYS.pig, pigSpritesheetUrl, {
       frameWidth: PET_SPRITE_FRAME_WIDTH,

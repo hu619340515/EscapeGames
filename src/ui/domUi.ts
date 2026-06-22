@@ -33,10 +33,20 @@ export function createDomUi(root: HTMLElement): void {
 
   createPetFlow.attachListeners();
 
+  const gmToggleButton = root.querySelector<HTMLButtonElement>('[data-action="gm-toggle-panel"]')!;
+  let isGmPanelOpen = false;
+  const setGmPanelOpen = (open: boolean): void => {
+    isGmPanelOpen = open;
+    refs.gmPanel.dataset.open = String(open);
+    refs.gmPanel.setAttribute("aria-hidden", String(!open));
+    gmToggleButton.setAttribute("aria-expanded", String(open));
+  };
+
   refs.continueButton.addEventListener("click", () => {
     coverMusic.setKeyboardActive(false);
     dispatchUiEvent(UI_EVENTS.CONTINUE_RUN);
   });
+  gmToggleButton.addEventListener("click", () => setGmPanelOpen(!isGmPanelOpen));
   root.querySelector('[data-action="pause"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.TOGGLE_PAUSE));
   root.querySelector('[data-action="resume"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.TOGGLE_PAUSE));
   root.querySelector('[data-action="save"]')!.addEventListener("click", () => dispatchUiEvent(UI_EVENTS.SAVE_RUN));
@@ -90,8 +100,7 @@ export function createDomUi(root: HTMLElement): void {
     refs.petDraw.hidden = flags.isStarted || !createPetFlow.isPetDrawVisible();
     refs.pause.hidden = !flags.isPaused;
     refs.ending.hidden = !(flags.isEndingChoice || flags.isEnded);
-    refs.gmPanel.dataset.open = "true";
-    refs.gmPanel.setAttribute("aria-hidden", "false");
+    setGmPanelOpen(isGmPanelOpen);
     const isCoverAnimationActive =
       !flags.isStarted && !createPetFlow.isCreatePetVisible() && !createPetFlow.isPetDrawVisible();
     coverAnimation.setActive(isCoverAnimationActive);
@@ -109,6 +118,7 @@ export function createDomUi(root: HTMLElement): void {
 
   coverController.refreshContinueState();
   coverController.renderAchievements();
+  setGmPanelOpen(false);
   coverMusic.setActive(true);
   coverMusic.setKeyboardActive(true);
 }

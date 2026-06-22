@@ -1,4 +1,4 @@
-import { coverAssets, createPetAssets } from "./assets";
+import { coverAssets, createPetAssets, uiAssets } from "./assets";
 import { DEFAULT_PROMPT } from "./constants";
 import { chapters } from "../data";
 
@@ -47,18 +47,23 @@ export function renderDomUiTemplate(): string {
       <button class="icon-button hud__pause" data-action="pause" title="暂停">II</button>
     </div>
 
-    <div class="gm-panel" data-panel="gm" data-open="true" aria-hidden="false" aria-label="GM">
-      <label class="gm-panel__field">
-        <span>关卡</span>
-        <select class="gm-panel__select" data-action="gm-select-chapter" data-ref="gmChapterSelect">
-          ${renderGmChapterOptions()}
-        </select>
-      </label>
-      <button class="gm-panel__button" data-action="gm-advance">&#36339;&#31456;</button>
-      <button class="gm-panel__button" data-action="gm-defeat-boss">&#20987;&#36133;BOSS</button>
-      <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="invincible" aria-pressed="false">无敌</button>
-      <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="infiniteJump" aria-pressed="false">无限跳跃</button>
-      <button class="gm-panel__button gm-panel__button--danger" data-action="gm-reset">重开</button>
+    <div class="gm-shell">
+      <button class="gm-launcher" data-action="gm-toggle-panel" aria-label="GM" aria-expanded="false" aria-controls="gm-debug-panel">
+        <img src="${uiAssets.gmRobotAvatar}" alt="" aria-hidden="true" />
+      </button>
+      <div id="gm-debug-panel" class="gm-panel" data-panel="gm" data-open="false" aria-hidden="true" aria-label="GM">
+        <label class="gm-panel__field">
+          <span>关卡</span>
+          <select class="gm-panel__select" data-action="gm-select-chapter" data-ref="gmChapterSelect">
+            ${renderGmChapterOptions()}
+          </select>
+        </label>
+        <button class="gm-panel__button" data-action="gm-advance">&#36339;&#31456;</button>
+        <button class="gm-panel__button" data-action="gm-defeat-boss">&#20987;&#36133;BOSS</button>
+        <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="invincible" aria-pressed="false">无敌</button>
+        <button class="gm-panel__button" data-action="gm-toggle" data-gm-feature="infiniteJump" aria-pressed="false">无限跳跃</button>
+        <button class="gm-panel__button gm-panel__button--danger" data-action="gm-reset">重开</button>
+      </div>
     </div>
 
     <section class="start-shell cover-shell" data-panel="start">

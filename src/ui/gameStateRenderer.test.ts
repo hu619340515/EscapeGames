@@ -164,6 +164,28 @@ function asFakeElement(element: HTMLElement): FakeElement {
   return element as unknown as FakeElement;
 }
 
+describe("renderHudAndEnding late platform mode", () => {
+  it("renders standard HUD for late chapters without CodeLife runtime state", () => {
+    const refs = createRefs();
+    const payload = createPayload();
+    payload.state.flags.platformThrowUnlocked = true;
+    globalThis.document = {
+      createElement: () => createFakeElement() as unknown as HTMLElement,
+    } as unknown as Document;
+
+    renderHudAndEnding(payload, refs);
+
+    expect(refs.hud.dataset.mode).toBe("standard");
+    expect(refs.hud.dataset.hudMode).toBe("standard");
+    expect(refs.boss.textContent).toContain("Boss");
+    expect(asFakeElement(refs.abilities).children.map((child) => child.textContent)).toEqual([
+      "攀附",
+      "代码吞噬",
+      "投掷数据刃",
+    ]);
+  });
+});
+
 describe("renderHudAndEnding CodeLife mode", () => {
   it("renders form labels and ignores stale boss runtime snapshots", () => {
     const refs = createRefs();
@@ -260,6 +282,16 @@ describe("renderHudAndEnding CodeLife mode", () => {
   it("surfaces gate denial messages in the CodeLife objective line", () => {
     const refs = createRefs();
     const payload = createPayload();
+    payload.state.codeLifeBoss = {
+      id: "gateway-warden",
+      name: "Runtime Gateway",
+      hp: 80,
+      maxHp: 160,
+      phaseIndex: 1,
+      phaseCount: 3,
+      phaseLabel: "Port Reset",
+      state: "inactive",
+    };
     payload.message = "需要 permission-rend 才能穿过这层权限膜。";
     globalThis.document = {
       createElement: () => createFakeElement() as unknown as HTMLElement,

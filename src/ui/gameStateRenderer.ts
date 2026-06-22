@@ -8,6 +8,7 @@ import type { GameUiPayload } from "../game/types";
 import type { DomUiRefs } from "./refs";
 
 const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
+const PLATFORM_THROW_UNLOCKED_FLAG = "platformThrowUnlocked";
 
 export interface GameStateFlags {
   isStarted: boolean;
@@ -27,7 +28,7 @@ export function getGameStateFlags(payload: GameUiPayload): GameStateFlags {
 
 export function renderHudAndEnding(payload: GameUiPayload, refs: DomUiRefs): void {
   const flags = getGameStateFlags(payload);
-  const isCodeLifeChapter = payload.chapter.index >= 3;
+  const isCodeLifeChapter = Boolean(payload.codeLifeForm || payload.state.codeLifeBoss);
   const isWrongGatewayWaiting =
     payload.chapter.id === "wrong-gateway" && payload.state.flags[WRONG_GATEWAY_CHANGED_FLAG] !== true;
   const collectibleCount = payload.state.chapterCollectibles[payload.chapter.id] ?? 0;
@@ -148,8 +149,12 @@ function renderStandardHud(
       ? "错误网关未响应"
       : "章节出口已开放";
   refs.stats.textContent = `完整度 ${payload.state.integrity}/${payload.state.maxIntegrity} | 记忆 ${payload.state.memoryFragments} | ${payload.chapter.collectibleLabel} ${collectibleCount}`;
+  const visibleAbilityNames =
+    payload.state.flags[PLATFORM_THROW_UNLOCKED_FLAG] === true
+      ? [...payload.abilityNames, "投掷数据刃"]
+      : payload.abilityNames;
   refs.abilities.replaceChildren(
-    ...payload.abilityNames.map((abilityName) => {
+    ...visibleAbilityNames.map((abilityName) => {
       const chip = document.createElement("span");
       chip.textContent = abilityName;
       return chip;

@@ -79,6 +79,10 @@ const TURRET_CONTROL_MS = 6000;
 const CODE_REBIRTH_CORE_RADIUS = 18;
 const CODE_REBIRTH_BODY_MIN_WIDTH = 205;
 const CODE_REBIRTH_BODY_MAX_WIDTH = 318;
+const CODE_REBIRTH_VIRTUAL_GRIP_SPACING = 360;
+const CODE_LIFE_VIRTUAL_GRIP_SPACING = 540;
+const VIRTUAL_GRIP_THICKNESS = 22;
+const VIRTUAL_GRIP_LABEL_PREFIX = "virtual-grip";
 
 const FALLBACK_GLYPHS = ["0", "1", "let", "fn", "/tmp", "ERR", "{}", "agent", "null", "grep", "pid", "while"];
 const SENSE_ABILITY_IDS: readonly AbilityId[] = ["ping-sense", "reverse-index", "vision-takeover"];
@@ -184,6 +188,7 @@ interface ChapterLayout {
   spawn: { x: number; y: number };
   exit: LayoutRect;
   surfaces: LayoutRect[];
+  gripOnlySurfaces: LayoutRect[];
   anchors: AnchorLayout[];
   hazards: HazardLayout[];
   abilityGates: AbilityGateLayout[];
@@ -1083,7 +1088,7 @@ export class CodeLifeMode {
         },
         pointerTarget: { x: pointer.worldX, y: pointer.worldY },
         isPrimaryDown: pointer.leftButtonDown(),
-        gripSurfaces: this.layout.surfaces.map((surface, index) => ({
+        gripSurfaces: [...this.layout.surfaces, ...this.layout.gripOnlySurfaces].map((surface, index) => ({
           id: surface.label ?? index,
           x: surface.x - surface.width / 2,
           y: surface.y - surface.height / 2,
@@ -1094,9 +1099,9 @@ export class CodeLifeMode {
       },
       {
         baseMaxSpeed: 470 * this.getFormState().accelerationScale,
-        maxGripDistance: 430 + this.mass * 20,
-        airSpeedLimit: 38,
-        airAcceleration: 62,
+        maxGripDistance: this.getLocomotionGripDistance(),
+        airSpeedLimit: this.chapter.id === "code-rebirth" ? 74 : 58,
+        airAcceleration: this.chapter.id === "code-rebirth" ? 120 : 86,
       },
     );
 
@@ -1106,6 +1111,11 @@ export class CodeLifeMode {
       -result.leadingDirection.x * Phaser.Math.Clamp(result.tractionStrength * 46, 0, 120),
       -result.leadingDirection.y * Phaser.Math.Clamp(result.tractionStrength * 32, 0, 90),
     );
+  }
+
+  private getLocomotionGripDistance(): number {
+    const baseDistance = this.chapter.id === "code-rebirth" ? 620 : 520;
+    return baseDistance + this.mass * 28;
   }
 
   private updateTendril(): void {
@@ -1908,8 +1918,9 @@ export class CodeLifeMode {
     const count = Math.min(6, locomotion.locomotionTendrils.length);
     for (let index = 0; index < count; index += 1) {
       const tendril = locomotion.locomotionTendrils[index];
+      const isVirtualGrip = String(tendril.surfaceId ?? "").startsWith(VIRTUAL_GRIP_LABEL_PREFIX);
       const distance = Phaser.Math.Distance.Between(tendril.source.x, tendril.source.y, tendril.target.x, tendril.target.y);
-      this.drawTendrilStrands(tendril.target.x, tendril.target.y, distance, 1, 0.42, tendril.source);
+      this.drawTendrilStrands(tendril.target.x, tendril.target.y, distance, 1, isVirtualGrip ? 0.14 : 0.42, tendril.source);
     }
   }
 
@@ -3576,6 +3587,7 @@ export class CodeLifeMode {
       spawn: config.spawn,
       exit: { ...centerRect(config.exit), label: config.exit.label, gate: config.exit.gate, to: config.exit.to },
       surfaces,
+      gripOnlySurfaces: this.createVirtualGripSurfaces(config),
       anchors,
       abilityGates: config.abilityGates.map((gate) => {
         const blocker = getCodeLifeAbilityGateBlocker(config, gate);
@@ -3621,6 +3633,44 @@ export class CodeLifeMode {
       }),
       turrets: (config.turrets ?? []).map((turret) => ({ ...turret })),
     };
+  }
+
+  private createVirtualGripSurfaces(config: CodeLifeChapterConfig): LayoutRect[] {
+    const spacing = config.chapterId === "code-rebirth" ? CODE_REBIRTH_VIRTUAL_GRIP_SPACING : CODE_LIFE_VIRTUAL_GRIP_SPACING;
+    return this.createVirtualGripGrid(config.world.width, config.world.height, spacing);
+  }
+
+  private createFallbackVirtualGripSurfaces(): LayoutRect[] {
+    return this.createVirtualGripGrid(FALLBACK_WIDTH, FALLBACK_HEIGHT, CODE_LIFE_VIRTUAL_GRIP_SPACING);
+  }
+
+  private createVirtualGripGrid(width: number, height: number, spacing: number): LayoutRect[] {
+    const safeSpacing = Math.max(160, spacing);
+    const insetX = Math.min(120, width * 0.06);
+    const insetY = Math.min(120, height * 0.06);
+    const surfaces: LayoutRect[] = [];
+
+    for (let y = insetY + safeSpacing * 0.5, index = 0; y < height - insetY; y += safeSpacing, index += 1) {
+      surfaces.push({
+        x: width / 2,
+        y,
+        width: Math.max(1, width - insetX * 2),
+        height: VIRTUAL_GRIP_THICKNESS,
+        label: `${VIRTUAL_GRIP_LABEL_PREFIX}-horizontal-${index}`,
+      });
+    }
+
+    for (let x = insetX + safeSpacing * 0.5, index = 0; x < width - insetX; x += safeSpacing, index += 1) {
+      surfaces.push({
+        x,
+        y: height / 2,
+        width: VIRTUAL_GRIP_THICKNESS,
+        height: Math.max(1, height - insetY * 2),
+        label: `${VIRTUAL_GRIP_LABEL_PREFIX}-vertical-${index}`,
+      });
+    }
+
+    return surfaces;
   }
 
   private resolvePassageTarget(to: string | undefined, candidates: readonly PassageTargetCandidate[]): LayoutRect | undefined {
@@ -3676,6 +3726,7 @@ export class CodeLifeMode {
         { x: 1940, y: 730, width: 360, height: 34 },
         { x: 2520, y: 350, width: 360, height: 30 },
       ],
+      gripOnlySurfaces: this.createFallbackVirtualGripSurfaces(),
       anchors: [
         { x: 190, y: 690 },
         { x: 430, y: 540 },

@@ -6,6 +6,10 @@ export const CURSOR_HUNT_WORLD_WIDTH = 1672;
 export const CURSOR_HUNT_WORLD_HEIGHT = 941;
 export const WRONG_GATEWAY_WORLD_WIDTH = 2880;
 export const WRONG_GATEWAY_WORLD_HEIGHT = 1080;
+export const CODE_REBIRTH_WORLD_WIDTH = 1440;
+export const CODE_REBIRTH_WORLD_HEIGHT = 2560;
+export const TRASH_MOUNTAIN_WORLD_WIDTH = 1440;
+export const TRASH_MOUNTAIN_WORLD_HEIGHT = 2600;
 export const PLAYER_SPEED = 250;
 export const JUMP_SPEED = 480;
 
@@ -116,6 +120,76 @@ const wrongGatewayHazards = [
   { x: 1840, y: 812 },
 ] as const;
 
+const codeRebirthPlatforms: PlatformDef[] = [
+  [CODE_REBIRTH_WORLD_WIDTH / 2, 2427, CODE_REBIRTH_WORLD_WIDTH, 47],
+  [456, 2258, 360, 39],
+  [704, 2098, 340, 39],
+  [944, 1942, 360, 39],
+  [744, 1786, 360, 39],
+  [512, 1630, 380, 39],
+  [314, 1474, 340, 39],
+  [542, 1318, 360, 39],
+  [760, 1162, 380, 39],
+  [1012, 1006, 360, 39],
+  [804, 850, 360, 39],
+  [560, 694, 400, 39],
+  [330, 538, 360, 39],
+  [548, 382, 420, 39],
+  [806, 246, 360, 39],
+];
+
+const codeRebirthCollectibles = [
+  { x: 456, y: 2210 },
+  { x: 944, y: 1894 },
+  { x: 512, y: 1582 },
+  { x: 542, y: 1270 },
+  { x: 1012, y: 958 },
+  { x: 330, y: 490 },
+  { x: 806, y: 198 },
+] as const;
+
+const codeRebirthHazards = [
+  { x: 704, y: 2055 },
+  { x: 744, y: 1743 },
+  { x: 760, y: 1119 },
+  { x: 548, y: 339 },
+] as const;
+
+const trashMountainPlatforms: PlatformDef[] = [
+  [720, 2528, 1380, 84],
+  [250, 2294, 330, 34],
+  [620, 2118, 310, 34],
+  [1038, 1944, 340, 34],
+  [780, 1766, 280, 34],
+  [390, 1588, 330, 34],
+  [742, 1408, 290, 34],
+  [1110, 1228, 330, 34],
+  [840, 1044, 300, 34],
+  [460, 862, 340, 34],
+  [805, 682, 290, 34],
+  [1120, 512, 350, 34],
+  [776, 354, 430, 34],
+  [1210, 324, 260, 34],
+];
+
+const trashMountainCollectibles = [
+  { x: 245, y: 2254 },
+  { x: 650, y: 2078 },
+  { x: 1075, y: 1904 },
+  { x: 410, y: 1548 },
+  { x: 1110, y: 1188 },
+  { x: 470, y: 822 },
+  { x: 1185, y: 472 },
+] as const;
+
+const trashMountainHazards = [
+  { x: 520, y: 2460 },
+  { x: 900, y: 1850 },
+  { x: 610, y: 1338 },
+  { x: 1020, y: 936 },
+  { x: 690, y: 594 },
+] as const;
+
 export function getWorldBounds(chapterId: ChapterId): WorldBounds {
   if (chapterId === "cursor-hunt") {
     return {
@@ -127,6 +201,18 @@ export function getWorldBounds(chapterId: ChapterId): WorldBounds {
     return {
       width: WRONG_GATEWAY_WORLD_WIDTH,
       height: WRONG_GATEWAY_WORLD_HEIGHT,
+    };
+  }
+  if (chapterId === "code-rebirth") {
+    return {
+      width: CODE_REBIRTH_WORLD_WIDTH,
+      height: CODE_REBIRTH_WORLD_HEIGHT,
+    };
+  }
+  if (chapterId === "trash-mountain") {
+    return {
+      width: TRASH_MOUNTAIN_WORLD_WIDTH,
+      height: TRASH_MOUNTAIN_WORLD_HEIGHT,
     };
   }
 
@@ -142,6 +228,12 @@ export function getPlatformDefs(chapterId: ChapterId, chapterIndex: number): Pla
   }
   if (chapterId === "wrong-gateway") {
     return [...wrongGatewayPlatforms];
+  }
+  if (chapterId === "code-rebirth") {
+    return [...codeRebirthPlatforms];
+  }
+  if (chapterId === "trash-mountain") {
+    return [...trashMountainPlatforms];
   }
 
   const yOffset = chapterIndex % 2 === 0 ? 0 : 32;
@@ -172,6 +264,12 @@ export function getCollectibleCount(chapterId: ChapterId): number {
   if (chapterId === "wrong-gateway") {
     return 0;
   }
+  if (chapterId === "code-rebirth") {
+    return codeRebirthCollectibles.length;
+  }
+  if (chapterId === "trash-mountain") {
+    return trashMountainCollectibles.length;
+  }
 
   return chapterId === "leder-d-drive" ? 9 : 7;
 }
@@ -183,6 +281,12 @@ export function getCollectiblePosition(
 ): { x: number; y: number } {
   if (chapterId === "cursor-hunt") {
     return cursorHuntCollectibles[index] ?? cursorHuntCollectibles[0];
+  }
+  if (chapterId === "code-rebirth") {
+    return codeRebirthCollectibles[index] ?? codeRebirthCollectibles[0];
+  }
+  if (chapterId === "trash-mountain") {
+    return trashMountainCollectibles[index] ?? trashMountainCollectibles[0];
   }
 
   return {
@@ -198,6 +302,12 @@ export function getHazardCount(chapterId: ChapterId, chapterIndex: number): numb
   if (chapterId === "wrong-gateway") {
     return 0;
   }
+  if (chapterId === "code-rebirth") {
+    return codeRebirthHazards.length;
+  }
+  if (chapterId === "trash-mountain") {
+    return trashMountainHazards.length;
+  }
 
   return chapterIndex < 4 ? 4 : 5;
 }
@@ -208,6 +318,12 @@ export function getHazardPosition(index: number, chapterId: ChapterId): { x: num
   }
   if (chapterId === "wrong-gateway") {
     return wrongGatewayHazards[index] ?? wrongGatewayHazards[0];
+  }
+  if (chapterId === "code-rebirth") {
+    return codeRebirthHazards[index] ?? codeRebirthHazards[0];
+  }
+  if (chapterId === "trash-mountain") {
+    return trashMountainHazards[index] ?? trashMountainHazards[0];
   }
 
   return {

@@ -108,6 +108,34 @@ export function createPixelTextures(scene: Phaser.Scene): void {
   g.generateTexture("hazard-scan", 64, 10);
 
   g.clear();
+  g.lineStyle(2, 0x1a0308, 0.95);
+  g.lineBetween(10, 21, 3, 27);
+  g.lineBetween(18, 22, 13, 30);
+  g.lineBetween(30, 22, 27, 30);
+  g.lineBetween(40, 21, 46, 29);
+  g.lineBetween(48, 19, 53, 25);
+  g.fillStyle(0x180307, 1);
+  g.fillEllipse(28, 15, 48, 21);
+  g.fillStyle(0xb81025, 1);
+  g.fillRoundedRect(7, 9, 14, 14, 4);
+  g.fillRoundedRect(17, 7, 15, 17, 5);
+  g.fillRoundedRect(29, 8, 14, 16, 5);
+  g.fillRoundedRect(40, 10, 9, 12, 4);
+  g.fillStyle(0xff5267, 0.9);
+  g.fillRect(13, 10, 5, 3);
+  g.fillRect(24, 8, 4, 3);
+  g.fillRect(36, 10, 3, 3);
+  g.fillStyle(0x46f5d5, 0.88);
+  g.fillRect(15, 17, 2, 5);
+  g.fillRect(25, 13, 5, 2);
+  g.fillRect(33, 17, 2, 5);
+  g.fillStyle(0xffd8dd, 0.95);
+  g.fillCircle(44, 13, 2);
+  g.fillStyle(0x4c000a, 0.95);
+  g.fillCircle(48, 15, 2);
+  g.generateTexture("wrong-gateway-virus-beetle", 54, 30);
+
+  g.clear();
   g.fillStyle(0xffffff, 1);
   g.fillRect(2, 0, 6, 10);
   g.fillRect(0, 2, 10, 6);

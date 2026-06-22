@@ -16,6 +16,7 @@ import closeDefault from "../assets/cover/create-pet-close-default.png";
 import closeDisabled from "../assets/cover/create-pet-close-disabled.png";
 import closeHover from "../assets/cover/create-pet-close-hover.png";
 import createPetBackground from "../../素材/创建宠物.png";
+import gmRobotAvatar from "../../素材/UI/gm-robot-avatar.png";
 import sendActive from "../assets/cover/create-pet-send-active.png";
 import sendDefault from "../assets/cover/create-pet-send-default.png";
 import sendDisabled from "../assets/cover/create-pet-send-disabled.png";
@@ -55,4 +56,8 @@ export const createPetAssets = {
   sendHover,
   sendActive,
   sendDisabled,
+};
+
+export const uiAssets = {
+  gmRobotAvatar,
 };

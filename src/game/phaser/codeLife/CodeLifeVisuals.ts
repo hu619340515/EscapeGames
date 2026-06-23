@@ -108,6 +108,16 @@ export function getCodeLifeHazardTextureKey(kind: CodeLifeHazardKind | undefined
 }
 
 export function getCodeLifeBossTextureKey(bossId: BossId | string | undefined): string {
+  if (bossId === "security-captain") return "boss-security-captain";
+  if (bossId === "download-mutant") return "boss-download-mutant";
+  if (bossId === "duplicate-copy") return "boss-duplicate-copy";
+  if (bossId === "search-index-spider") return "boss-search-index-spider";
+  if (bossId === "c-lock-colossus") return "boss-c-lock-colossus";
+  if (bossId === "uac-eye") return "boss-uac-eye";
+  if (bossId === "task-manager-executioner") return "boss-task-manager-executioner";
+  if (bossId === "quarantine-warden") return "boss-quarantine-warden";
+  if (bossId === "restore-ghost") return "boss-restore-ghost";
+  if (bossId === "admin-hand") return "boss-admin-hand";
   if (bossId === "lens-keeper") return "boss-lens-keeper";
   if (bossId === "print-queue-beast") return "boss-print-queue-beast";
   if (bossId === "wake-word-guard") return "boss-wake-word-guard";

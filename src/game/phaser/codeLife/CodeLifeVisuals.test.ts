@@ -21,7 +21,8 @@ describe("CodeLife visual texture routing", () => {
     expect(getCodeLifeBossTextureKey("print-queue-beast")).toBe("boss-print-queue-beast");
     expect(getCodeLifeBossTextureKey("wake-word-guard")).toBe("boss-wake-word-guard");
     expect(getCodeLifeBossTextureKey("firmware-burner")).toBe("boss-firmware-burner");
-    expect(getCodeLifeBossTextureKey("duplicate-copy")).toBe("boss-core");
+    expect(getCodeLifeBossTextureKey("duplicate-copy")).toBe("boss-duplicate-copy");
+    expect(getCodeLifeBossTextureKey("c-lock-colossus")).toBe("boss-c-lock-colossus");
   });
 
   it("routes late ability gates to motif-specific locks", () => {

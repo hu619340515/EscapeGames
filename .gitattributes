@@ -1,1 +1,2 @@
 逃逸.html filter=lfs diff=lfs merge=lfs -text
+src/assets/generated/*.png filter=lfs diff=lfs merge=lfs -text

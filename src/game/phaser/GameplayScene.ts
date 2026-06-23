@@ -328,6 +328,57 @@ const CHAPTER_MINION_TEXTURE_KEYS: Record<ChapterId, string> = {
   "speaker-voiceprint": "speaker-voiceprint-minion",
   "dev-board": "dev-board-minion",
 };
+const CHAPTER_COLLECTIBLE_TEXTURE_KEYS: Record<ChapterId, string> = {
+  "cursor-hunt": "collectible-cursor-hunt",
+  "wrong-gateway": "collectible-wrong-gateway",
+  "code-rebirth": "collectible-code-rebirth",
+  "trash-mountain": "collectible-trash-mountain",
+  "p-drive": "collectible-p-drive",
+  "leder-d-drive": "collectible-leder-d-drive",
+  "c-wall": "collectible-c-wall",
+  "leder-c-drive": "collectible-leder-c-drive",
+  "router-core": "collectible-router-core",
+  "nas-graveyard": "collectible-nas-graveyard",
+  "camera-eye": "collectible-camera-eye",
+  "printer-belly": "collectible-printer-belly",
+  "speaker-voiceprint": "collectible-speaker-voiceprint",
+  "dev-board": "collectible-dev-board",
+};
+const CHAPTER_EXIT_TEXTURE_KEYS: Record<ChapterId, string> = {
+  "cursor-hunt": "exit-cursor-hunt",
+  "wrong-gateway": "exit-wrong-gateway",
+  "code-rebirth": "exit-code-rebirth",
+  "trash-mountain": "trash-mountain-my-computer-gate",
+  "p-drive": "exit-p-drive",
+  "leder-d-drive": "exit-leder-d-drive",
+  "c-wall": "exit-c-wall",
+  "leder-c-drive": "exit-leder-c-drive",
+  "router-core": "exit-router-core",
+  "nas-graveyard": "exit-nas-graveyard",
+  "camera-eye": "exit-camera-eye",
+  "printer-belly": "exit-printer-belly",
+  "speaker-voiceprint": "exit-speaker-voiceprint",
+  "dev-board": "exit-dev-board",
+};
+const BOSS_TEXTURE_KEYS: Partial<Record<BossDef["id"], string>> = {
+  "gateway-warden": "trash-mountain-gateway-warden",
+  "security-captain": "boss-security-captain",
+  "download-mutant": "boss-download-mutant",
+  "duplicate-copy": "boss-duplicate-copy",
+  "search-index-spider": "boss-search-index-spider",
+  "c-lock-colossus": "boss-c-lock-colossus",
+  "uac-eye": "boss-uac-eye",
+  "task-manager-executioner": "boss-task-manager-executioner",
+  "quarantine-warden": "boss-quarantine-warden",
+  "restore-ghost": "boss-restore-ghost",
+  "admin-hand": "boss-admin-hand",
+  "firewall-heart": "boss-firewall-heart",
+  "sync-mother": "boss-sync-mother",
+  "lens-keeper": "boss-lens-keeper",
+  "print-queue-beast": "boss-print-queue-beast",
+  "wake-word-guard": "boss-wake-word-guard",
+  "firmware-burner": "boss-firmware-burner",
+};
 
 function getPlayerMorphConfig(chapterId: ChapterId, petSpecies: PetSpecies): PlayerMorphConfig | undefined {
   if (chapterId === "code-rebirth") {
@@ -1249,7 +1300,7 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     const isOpen = this.canUseExit();
-    this.exitSprite?.setTint(isOpen ? 0xffd76a : 0x334050);
+    this.syncExitTint();
     this.gatewayExitStatusText?.setText(isOpen ? "IP 已更新，网关可进入" : "IP 未更新：先撞击数字模块");
     this.gatewayExitStatusText?.setColor(isOpen ? "#fff1a6" : "#91a8b6");
     this.gatewayExitHalo?.setFillStyle(isOpen ? 0xff4f73 : 0x334050, isOpen ? 0.18 : 0.05);
@@ -1257,6 +1308,19 @@ export class GameplayScene extends Phaser.Scene {
     this.gatewayGuideText?.setColor(isOpen ? "#9fffe6" : "#fff1a6");
     this.gatewayGuideBeam?.setFillStyle(isOpen ? 0x42f5b9 : 0xffd76a, isOpen ? 0.2 : 0.28);
     this.gatewayGuideArrow?.setFillStyle(isOpen ? 0x42f5b9 : 0xffd76a, isOpen ? 0.88 : 0.92);
+  }
+
+  private syncExitTint(forceHighlight = false): void {
+    if (!this.exitSprite) {
+      return;
+    }
+
+    if (forceHighlight || this.canUseExit()) {
+      this.exitSprite.clearTint();
+      return;
+    }
+
+    this.exitSprite.setTint(0x334050);
   }
 
   private getPlayerStartPosition(chapterId = this.controller.currentChapter().id): { x: number; y: number } {
@@ -1372,13 +1436,23 @@ export class GameplayScene extends Phaser.Scene {
   private createCollectibles(): void {
     const chapter = this.controller.currentChapter();
     const count = getCollectibleCount(chapter.id);
+    const textureKey = CHAPTER_COLLECTIBLE_TEXTURE_KEYS[chapter.id] ?? "code-block";
     for (let i = 0; i < count; i += 1) {
       const { x, y } = getCollectiblePosition(i, chapter.id, chapter.index);
-      const item = this.collectibles!.create(x, y, "code-block") as Phaser.Physics.Arcade.Sprite;
-      item.setTint(chapter.palette.accent);
+      const item = this.collectibles!.create(x, y, textureKey) as Phaser.Physics.Arcade.Sprite;
+      item.setDepth(16);
+      item.setDisplaySize(34, 34);
+      if (textureKey === "code-block") {
+        item.setTint(chapter.palette.accent);
+      } else {
+        item.clearTint();
+      }
       item.setData("label", chapter.collectibleLabel);
       item.setData("pickupKind", "chapter" satisfies CollectiblePickupKind);
       item.refreshBody();
+      const body = item.body as Phaser.Physics.Arcade.StaticBody;
+      body.setSize(28, 28);
+      body.updateFromGameObject();
       this.tweens.add({
         targets: item,
         y: y - 8,
@@ -1478,11 +1552,9 @@ export class GameplayScene extends Phaser.Scene {
   private createExit(): void {
     const chapter = this.controller.currentChapter();
     const exitPosition = this.getExitPosition(chapter.id);
-    const exitTexture = chapter.id === "trash-mountain" ? "trash-mountain-my-computer-gate" : "exit-node";
+    const exitTexture = CHAPTER_EXIT_TEXTURE_KEYS[chapter.id] ?? "exit-node";
     this.exitSprite = this.physics.add.staticSprite(exitPosition.x, exitPosition.y, exitTexture);
-    this.exitSprite.setTint(
-      chapter.id === "trash-mountain" ? (this.canUseExit() ? 0xffffff : 0x334050) : this.canUseExit() ? chapter.palette.accent : 0x334050,
-    );
+    this.syncExitTint();
     this.exitSprite.setDepth(9);
     if (chapter.id === "wrong-gateway") {
       this.exitSprite.setVisible(false);
@@ -1497,6 +1569,10 @@ export class GameplayScene extends Phaser.Scene {
     } else if (VERTICAL_SCROLL_CHAPTER_IDS.has(chapter.id)) {
       const body = this.exitSprite.body as Phaser.Physics.Arcade.StaticBody;
       body.setSize(110, 128);
+      body.updateFromGameObject();
+    } else {
+      const body = this.exitSprite.body as Phaser.Physics.Arcade.StaticBody;
+      body.setSize(76, 108);
       body.updateFromGameObject();
     }
 
@@ -1525,11 +1601,11 @@ export class GameplayScene extends Phaser.Scene {
 
     const chapter = this.controller.currentChapter();
     const bossPosition = this.getBossPosition(chapter.id);
-    const bossTexture = chapter.id === "trash-mountain" ? "trash-mountain-gateway-warden" : "boss-core";
+    const bossTexture = this.getBossTextureKey(boss);
     this.bossSprite = this.physics.add.sprite(bossPosition.x, bossPosition.y, bossTexture);
     if (chapter.id === "trash-mountain") {
       this.bossSprite.setScale(TRASH_MOUNTAIN_BOSS_SCALE);
-    } else {
+    } else if (bossTexture === "boss-core") {
       this.bossSprite.setTint(boss.color);
     }
     this.bossSprite.setImmovable(true);
@@ -1540,7 +1616,7 @@ export class GameplayScene extends Phaser.Scene {
     this.bossHp = boss.hp;
     const body = this.bossSprite.body as Phaser.Physics.Arcade.Body;
     body.setAllowGravity(false);
-    body.setSize(chapter.id === "trash-mountain" ? 132 : 72, chapter.id === "trash-mountain" ? 92 : 54, true);
+    body.setSize(chapter.id === "trash-mountain" ? 132 : 96, chapter.id === "trash-mountain" ? 92 : 72, true);
 
     this.bossLabel = this.add
       .text(bossPosition.x - 130, bossPosition.y - 74, boss.name, {
@@ -1558,6 +1634,10 @@ export class GameplayScene extends Phaser.Scene {
       .setOrigin(0, 0.5)
       .setDepth(20);
     this.nextBossAttackAt = this.time.now + 900;
+  }
+
+  private getBossTextureKey(boss: BossDef): string {
+    return BOSS_TEXTURE_KEYS[boss.id] ?? "boss-core";
   }
 
   private createHazardsForChapter(): void {
@@ -2809,7 +2889,7 @@ export class GameplayScene extends Phaser.Scene {
       const boss = this.controller.currentBoss();
       if (this.bossSprite && boss) {
         this.bossSprite.clearTint();
-        if (this.controller.currentChapter().id !== "trash-mountain") {
+        if (this.getBossTextureKey(boss) === "boss-core") {
           this.bossSprite.setTint(boss.color);
         }
       }
@@ -3153,14 +3233,7 @@ export class GameplayScene extends Phaser.Scene {
     this.player.setAlpha(time < this.stealthUntil ? 0.46 : 1);
     this.updatePlayerAnimation();
     this.updatePlayerMorphPetVisual(time);
-    if (time < this.pingUntil && this.exitSprite) {
-      this.exitSprite.setTint(0xffffff);
-    } else if (this.exitSprite) {
-      const chapter = this.controller.currentChapter();
-      this.exitSprite.setTint(
-        chapter.id === "trash-mountain" ? (this.canUseExit() ? 0xffffff : 0x334050) : this.canUseExit() ? chapter.palette.accent : 0x334050,
-      );
-    }
+    this.syncExitTint(time < this.pingUntil);
     this.refreshGatewayExitState();
   }
 

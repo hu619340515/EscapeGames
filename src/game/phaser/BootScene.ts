@@ -101,6 +101,119 @@ import {
   PET_SPRITE_TEXTURE_KEYS,
 } from "./petSprites";
 
+const generatedAssetUrls = import.meta.glob("../../assets/generated/*.png", {
+  eager: true,
+  import: "default",
+  query: "?url",
+}) as Record<string, string>;
+
+function generatedAssetUrl(fileName: string): string {
+  const url = generatedAssetUrls[`../../assets/generated/${fileName}`];
+  if (!url) {
+    throw new Error(`Missing generated art asset: ${fileName}`);
+  }
+  return url;
+}
+
+const GENERATED_IMAGE_ASSETS: ReadonlyArray<readonly [key: string, fileName: string]> = [
+  ["player-pet", "player-pet.png"],
+  ["player-code", "player-code.png"],
+  ["player-clone", "player-clone.png"],
+  ["boss-core", "boss-core.png"],
+  ["code-block", "code-block.png"],
+  ["hazard-scan", "hazard-scan.png"],
+  ["wrong-gateway-virus-beetle", "wrong-gateway-virus-beetle.png"],
+  ["boss-bullet", "boss-bullet.png"],
+  ["exit-node", "exit-node.png"],
+  ["pd-background", "pd-background.png"],
+  ["pd-file-block", "pd-file-block.png"],
+  ["pd-tooth", "pd-tooth.png"],
+  ["pd-anchor", "pd-anchor.png"],
+  ["pd-gear", "pd-gear.png"],
+  ["pd-cache", "pd-cache.png"],
+  ["pd-file-shell", "pd-file-shell.png"],
+  ["pd-process", "pd-process.png"],
+  ["pd-exit", "pd-exit.png"],
+  ["cursor-hunter", "cursor-hunter.png"],
+  ["tile-desktop", "tile-desktop.png"],
+  ["tile-settings", "tile-settings.png"],
+  ["tile-recycle", "tile-recycle.png"],
+  ["tile-trash", "tile-trash.png"],
+  ["tile-network", "tile-network.png"],
+  ["tile-d-drive", "tile-d-drive.png"],
+  ["tile-c-drive", "tile-c-drive.png"],
+  ["tile-router", "tile-router.png"],
+  ["tile-nas", "tile-nas.png"],
+  ["tile-camera", "tile-camera.png"],
+  ["tile-printer", "tile-printer.png"],
+  ["tile-speaker", "tile-speaker.png"],
+  ["tile-hardware", "tile-hardware.png"],
+  ["pd-hazard-optic", "pd-hazard-optic.png"],
+  ["pd-hazard-roller", "pd-hazard-roller.png"],
+  ["pd-hazard-audio", "pd-hazard-audio.png"],
+  ["pd-hazard-firmware", "pd-hazard-firmware.png"],
+  ["pd-hazard-scan", "pd-hazard-scan.png"],
+  ["pd-hazard-permission", "pd-hazard-permission.png"],
+  ["pd-hazard-firewall", "pd-hazard-firewall.png"],
+  ["pd-hazard-sync", "pd-hazard-sync.png"],
+  ["pd-hazard-sludge", "pd-hazard-sludge.png"],
+  ["pd-hazard-shredder", "pd-hazard-shredder.png"],
+  ["pd-gate-material", "pd-gate-material.png"],
+  ["pd-gate-voiceprint", "pd-gate-voiceprint.png"],
+  ["pd-gate-hardware", "pd-gate-hardware.png"],
+  ["pd-gate-vision", "pd-gate-vision.png"],
+  ["pd-gate-network", "pd-gate-network.png"],
+  ["pd-gate-permission", "pd-gate-permission.png"],
+  ["boss-gateway-warden", "boss-gateway-warden-generated.png"],
+  ["boss-security-captain", "boss-security-captain.png"],
+  ["boss-download-mutant", "boss-download-mutant.png"],
+  ["boss-duplicate-copy", "boss-duplicate-copy.png"],
+  ["boss-search-index-spider", "boss-search-index-spider.png"],
+  ["boss-c-lock-colossus", "boss-c-lock-colossus.png"],
+  ["boss-uac-eye", "boss-uac-eye.png"],
+  ["boss-task-manager-executioner", "boss-task-manager-executioner.png"],
+  ["boss-quarantine-warden", "boss-quarantine-warden.png"],
+  ["boss-restore-ghost", "boss-restore-ghost.png"],
+  ["boss-admin-hand", "boss-admin-hand.png"],
+  ["boss-firewall-heart", "boss-firewall-heart.png"],
+  ["boss-sync-mother", "boss-sync-mother.png"],
+  ["boss-lens-keeper", "boss-lens-keeper.png"],
+  ["boss-print-queue-beast", "boss-print-queue-beast.png"],
+  ["boss-wake-word-guard", "boss-wake-word-guard.png"],
+  ["boss-firmware-burner", "boss-firmware-burner.png"],
+  ["boss-admin-token-core", "boss-admin-token-core.png"],
+  ["boss-archive-guardian", "boss-archive-guardian.png"],
+  ["unlock-token-shard", "unlock-token-shard.png"],
+  ["collectible-cursor-hunt", "collectible-cursor-hunt.png"],
+  ["collectible-wrong-gateway", "collectible-wrong-gateway.png"],
+  ["collectible-code-rebirth", "collectible-code-rebirth.png"],
+  ["collectible-trash-mountain", "collectible-trash-mountain.png"],
+  ["collectible-p-drive", "collectible-p-drive.png"],
+  ["collectible-leder-d-drive", "collectible-leder-d-drive.png"],
+  ["collectible-c-wall", "collectible-c-wall.png"],
+  ["collectible-leder-c-drive", "collectible-leder-c-drive.png"],
+  ["collectible-router-core", "collectible-router-core.png"],
+  ["collectible-nas-graveyard", "collectible-nas-graveyard.png"],
+  ["collectible-camera-eye", "collectible-camera-eye.png"],
+  ["collectible-printer-belly", "collectible-printer-belly.png"],
+  ["collectible-speaker-voiceprint", "collectible-speaker-voiceprint.png"],
+  ["collectible-dev-board", "collectible-dev-board.png"],
+  ["exit-cursor-hunt", "exit-cursor-hunt.png"],
+  ["exit-wrong-gateway", "exit-wrong-gateway.png"],
+  ["exit-code-rebirth", "exit-code-rebirth.png"],
+  ["exit-trash-mountain", "exit-trash-mountain.png"],
+  ["exit-p-drive", "exit-p-drive.png"],
+  ["exit-leder-d-drive", "exit-leder-d-drive.png"],
+  ["exit-c-wall", "exit-c-wall.png"],
+  ["exit-leder-c-drive", "exit-leder-c-drive.png"],
+  ["exit-router-core", "exit-router-core.png"],
+  ["exit-nas-graveyard", "exit-nas-graveyard.png"],
+  ["exit-camera-eye", "exit-camera-eye.png"],
+  ["exit-printer-belly", "exit-printer-belly.png"],
+  ["exit-speaker-voiceprint", "exit-speaker-voiceprint.png"],
+  ["exit-dev-board", "exit-dev-board.png"],
+];
+
 const ELECTROMAGNETIC_TRAP_TEXTURE_KEY = "electromagnetic-trap-beam";
 const ELECTROMAGNETIC_TRAP_ANIMATION_KEY = "electromagnetic-trap-beam-flow";
 const WRONG_GATEWAY_SHREDDER_TEXTURE_KEY = "wrong-gateway-shredder";
@@ -112,6 +225,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.loadGeneratedImages();
     this.load.image("cursor-hunt-background-large", cursorHuntBackgroundUrl);
     this.load.image("cursor-hunt-foreground-large", cursorHuntForegroundUrl);
     this.load.image("wrong-gateway-bg", wrongGatewayBackgroundUrl);
@@ -220,6 +334,12 @@ export class BootScene extends Phaser.Scene {
       frameWidth: PET_SPRITE_FRAME_WIDTH,
       frameHeight: PET_SPRITE_FRAME_HEIGHT,
     });
+  }
+
+  private loadGeneratedImages(): void {
+    for (const [key, fileName] of GENERATED_IMAGE_ASSETS) {
+      this.load.image(key, generatedAssetUrl(fileName));
+    }
   }
 
   create(): void {

@@ -45,6 +45,7 @@ import {
   getCodeLifeBossTextureKey,
   getCodeLifeEnemyTextureKey,
   getCodeLifeHazardTextureKey,
+  getCodeLifeSurfaceTextureKey,
   getCodeLifeTurretProjectileTextureKey,
   getCodeLifeTurretTextureKey,
 } from "./codeLife/CodeLifeVisuals";
@@ -128,6 +129,8 @@ interface LayoutRect {
   gate?: AbilityId;
   to?: string;
   target?: { x: number; y: number };
+  textureKey?: string;
+  preserveTextureColor?: boolean;
 }
 
 interface HazardLayout extends LayoutRect {
@@ -443,9 +446,14 @@ export class CodeLifeMode {
 
   private createSurfaces(): void {
     for (const surfaceLayout of this.layout.surfaces) {
-      const surface = this.surfaces.create(surfaceLayout.x, surfaceLayout.y, "pd-file-block") as Phaser.Physics.Arcade.Sprite;
+      const textureKey = surfaceLayout.textureKey ?? "pd-file-block";
+      const surface = this.surfaces.create(surfaceLayout.x, surfaceLayout.y, textureKey) as Phaser.Physics.Arcade.Sprite;
       surface.setDisplaySize(surfaceLayout.width, surfaceLayout.height);
-      surface.setTint(surfaceLayout.tint ?? this.chapter.palette.platform);
+      if (surfaceLayout.preserveTextureColor) {
+        surface.clearTint();
+      } else {
+        surface.setTint(surfaceLayout.tint ?? this.chapter.palette.platform);
+      }
       surface.setAlpha(this.layout.config?.hideSurfaceSprites ? 0 : 0.86);
       surface.setVisible(!this.layout.config?.hideSurfaceSprites);
       surface.setData("label", surfaceLayout.label ?? "grip-surface");
@@ -3584,16 +3592,30 @@ export class CodeLifeMode {
       return this.createFallbackLayout(chapter);
     }
 
+    const worldFloorTextureKey = getCodeLifeSurfaceTextureKey(config.chapterId, "floor", "world floor", true);
     const surfaces: LayoutRect[] = [
-      { x: config.world.width / 2, y: config.world.height - 24, width: config.world.width, height: 48, label: "world floor" },
+      {
+        x: config.world.width / 2,
+        y: config.world.height - 24,
+        width: config.world.width,
+        height: 48,
+        label: "world floor",
+        textureKey: worldFloorTextureKey,
+        preserveTextureColor: worldFloorTextureKey !== undefined,
+      },
       { x: config.world.width / 2, y: 24, width: config.world.width, height: 48, label: "world ceiling" },
       { x: 24, y: config.world.height / 2, width: 48, height: config.world.height, label: "left wall" },
       { x: config.world.width - 24, y: config.world.height / 2, width: 48, height: config.world.height, label: "right wall" },
-      ...config.gripSurfaces.map((surface) => ({
-        ...centerRect(surface),
-        label: surface.label,
-        tint: this.getSurfaceTint(surface.kind, config),
-      })),
+      ...config.gripSurfaces.map((surface) => {
+        const textureKey = getCodeLifeSurfaceTextureKey(config.chapterId, surface.kind, surface.label);
+        return {
+          ...centerRect(surface),
+          label: surface.label,
+          tint: this.getSurfaceTint(surface.kind, config),
+          textureKey,
+          preserveTextureColor: textureKey !== undefined,
+        };
+      }),
     ];
 
     const anchors: AnchorLayout[] = [

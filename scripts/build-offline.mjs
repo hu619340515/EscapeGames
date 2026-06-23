@@ -27,6 +27,18 @@ function guessMime(filePath) {
   if (extension === ".svg") {
     return "image/svg+xml";
   }
+  if (extension === ".wav") {
+    return "audio/wav";
+  }
+  if (extension === ".ogg") {
+    return "audio/ogg";
+  }
+  if (extension === ".mp3") {
+    return "audio/mpeg";
+  }
+  if (extension === ".m4a") {
+    return "audio/mp4";
+  }
   return "application/octet-stream";
 }
 
@@ -50,7 +62,7 @@ async function inlineAssetReferences(source, baseDir = distDir) {
     output = output.replaceAll(match, dataUrl);
   }
 
-  const newUrlMatches = [...output.matchAll(/new URL\("([^"]+\.(?:png|jpe?g|webp|svg))",import\.meta\.url\)\.href/g)];
+  const newUrlMatches = [...output.matchAll(/new URL\("([^"]+\.(?:png|jpe?g|webp|svg|wav|ogg|mp3|m4a))",import\.meta\.url\)\.href/g)];
   for (const match of newUrlMatches) {
     const assetPath = path.join(baseDir, match[1]);
     const dataUrl = await toDataUrl(assetPath);

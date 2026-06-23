@@ -1,5 +1,97 @@
-import type { AbilityId, BossId } from "../../types";
-import type { CodeLifeEnemyKind, CodeLifeHazardKind } from "./CodeLifeChapterConfig";
+import type { AbilityId, BossId, ChapterId } from "../../types";
+import type { CodeLifeEnemyKind, CodeLifeHazardKind, CodeLifeSurfaceKind } from "./CodeLifeChapterConfig";
+
+export interface CodeLifeSurfaceTextureKeys {
+  readonly bottomPlatform: string;
+  readonly platformShelf: string;
+}
+
+const CODE_LIFE_SURFACE_TEXTURE_KEYS: Partial<Record<ChapterId, CodeLifeSurfaceTextureKeys>> = {
+  "p-drive": {
+    bottomPlatform: "p-drive-bottom-platform",
+    platformShelf: "p-drive-platform-shelf",
+  },
+  "leder-d-drive": {
+    bottomPlatform: "leder-d-drive-bottom-platform",
+    platformShelf: "leder-d-drive-platform-shelf",
+  },
+  "c-wall": {
+    bottomPlatform: "c-wall-bottom-platform",
+    platformShelf: "c-wall-platform-shelf",
+  },
+  "leder-c-drive": {
+    bottomPlatform: "leder-c-drive-bottom-platform",
+    platformShelf: "leder-c-drive-platform-shelf",
+  },
+  "router-core": {
+    bottomPlatform: "router-core-bottom-platform",
+    platformShelf: "router-core-platform-shelf",
+  },
+  "nas-graveyard": {
+    bottomPlatform: "nas-graveyard-bottom-platform",
+    platformShelf: "nas-graveyard-platform-shelf",
+  },
+  "camera-eye": {
+    bottomPlatform: "camera-eye-bottom-platform",
+    platformShelf: "camera-eye-platform-shelf",
+  },
+  "printer-belly": {
+    bottomPlatform: "printer-belly-bottom-platform",
+    platformShelf: "printer-belly-platform-shelf",
+  },
+  "speaker-voiceprint": {
+    bottomPlatform: "speaker-voiceprint-bottom-platform",
+    platformShelf: "speaker-voiceprint-platform-shelf",
+  },
+  "dev-board": {
+    bottomPlatform: "dev-board-bottom-platform",
+    platformShelf: "dev-board-platform-shelf",
+  },
+};
+
+const BOTTOM_PLATFORM_LABEL_HINTS = [
+  "base",
+  "bank",
+  "lip",
+  "throat",
+  "outer",
+  "intake",
+  "tray",
+  "grille",
+  "usb",
+] as const;
+
+export function getCodeLifeSurfaceTextureKeys(chapterId: ChapterId): CodeLifeSurfaceTextureKeys | undefined {
+  return CODE_LIFE_SURFACE_TEXTURE_KEYS[chapterId];
+}
+
+export function getCodeLifeSurfaceTextureKey(
+  chapterId: ChapterId,
+  kind: CodeLifeSurfaceKind | undefined,
+  label: string | undefined,
+  isWorldFloor = false,
+): string | undefined {
+  const keys = getCodeLifeSurfaceTextureKeys(chapterId);
+  if (!keys) {
+    return undefined;
+  }
+  if (isWorldFloor) {
+    return keys.bottomPlatform;
+  }
+  if (kind === "wall" || kind === "pipe" || kind === "cable") {
+    return undefined;
+  }
+  if (kind === "floor") {
+    const normalizedLabel = label?.toLowerCase() ?? "";
+    return BOTTOM_PLATFORM_LABEL_HINTS.some((hint) => normalizedLabel.includes(hint))
+      ? keys.bottomPlatform
+      : keys.platformShelf;
+  }
+  if (kind === "rail" || kind === "ceiling" || kind === "mesh" || kind === "shell") {
+    return keys.platformShelf;
+  }
+  return undefined;
+}
 
 export function getCodeLifeHazardTextureKey(kind: CodeLifeHazardKind | undefined): string {
   if (kind === "optic-burn") return "pd-hazard-optic";

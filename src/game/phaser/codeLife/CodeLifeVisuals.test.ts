@@ -3,6 +3,8 @@ import {
   getCodeLifeAbilityGateTextureKey,
   getCodeLifeBossTextureKey,
   getCodeLifeHazardTextureKey,
+  getCodeLifeSurfaceTextureKey,
+  getCodeLifeSurfaceTextureKeys,
 } from "./CodeLifeVisuals";
 
 describe("CodeLife visual texture routing", () => {
@@ -28,5 +30,28 @@ describe("CodeLife visual texture routing", () => {
     expect(getCodeLifeAbilityGateTextureKey("hardware-parasite")).toBe("pd-gate-hardware");
     expect(getCodeLifeAbilityGateTextureKey("vision-takeover")).toBe("pd-gate-vision");
     expect(getCodeLifeAbilityGateTextureKey("cling")).toBe("pd-file-block");
+  });
+
+  it("routes chapters 5 through 14 to generated ground and air platform art", () => {
+    const chapterIds = [
+      "p-drive",
+      "leder-d-drive",
+      "c-wall",
+      "leder-c-drive",
+      "router-core",
+      "nas-graveyard",
+      "camera-eye",
+      "printer-belly",
+      "speaker-voiceprint",
+      "dev-board",
+    ] as const;
+
+    for (const chapterId of chapterIds) {
+      const keys = getCodeLifeSurfaceTextureKeys(chapterId);
+      expect(keys?.bottomPlatform).toBe(`${chapterId}-bottom-platform`);
+      expect(keys?.platformShelf).toBe(`${chapterId}-platform-shelf`);
+      expect(getCodeLifeSurfaceTextureKey(chapterId, "floor", "world floor", true)).toBe(`${chapterId}-bottom-platform`);
+      expect(getCodeLifeSurfaceTextureKey(chapterId, "rail", "air shelf")).toBe(`${chapterId}-platform-shelf`);
+    }
   });
 });

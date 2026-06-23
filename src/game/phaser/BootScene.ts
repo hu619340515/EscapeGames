@@ -41,6 +41,26 @@ import cameraEyeBackgroundUrl from "../../../素材/第十一章/背景/camera-e
 import printerBellyBackgroundUrl from "../../../素材/第十二章/背景/printer-belly-background-iteration.png";
 import speakerVoiceprintBackgroundUrl from "../../../素材/第十三章/背景/speaker-voiceprint-background-iteration.png";
 import devBoardBackgroundUrl from "../../../素材/第十四章/背景/dev-board-background-iteration.png";
+import pDriveBottomPlatformUrl from "../../../素材/第五章/地面/p-drive-bottom-platform.png";
+import pDrivePlatformShelfUrl from "../../../素材/第五章/平台/p-drive-platform-shelf.png";
+import lederDDriveBottomPlatformUrl from "../../../素材/第六章/地面/leder-d-drive-bottom-platform.png";
+import lederDDrivePlatformShelfUrl from "../../../素材/第六章/平台/leder-d-drive-platform-shelf.png";
+import cWallBottomPlatformUrl from "../../../素材/第七章/地面/c-wall-bottom-platform.png";
+import cWallPlatformShelfUrl from "../../../素材/第七章/平台/c-wall-platform-shelf.png";
+import lederCDriveBottomPlatformUrl from "../../../素材/第八章/地面/leder-c-drive-bottom-platform.png";
+import lederCDrivePlatformShelfUrl from "../../../素材/第八章/平台/leder-c-drive-platform-shelf.png";
+import routerCoreBottomPlatformUrl from "../../../素材/第九章/地面/router-core-bottom-platform.png";
+import routerCorePlatformShelfUrl from "../../../素材/第九章/平台/router-core-platform-shelf.png";
+import nasGraveyardBottomPlatformUrl from "../../../素材/第十章/地面/nas-graveyard-bottom-platform.png";
+import nasGraveyardPlatformShelfUrl from "../../../素材/第十章/平台/nas-graveyard-platform-shelf.png";
+import cameraEyeBottomPlatformUrl from "../../../素材/第十一章/地面/camera-eye-bottom-platform.png";
+import cameraEyePlatformShelfUrl from "../../../素材/第十一章/平台/camera-eye-platform-shelf.png";
+import printerBellyBottomPlatformUrl from "../../../素材/第十二章/地面/printer-belly-bottom-platform.png";
+import printerBellyPlatformShelfUrl from "../../../素材/第十二章/平台/printer-belly-platform-shelf.png";
+import speakerVoiceprintBottomPlatformUrl from "../../../素材/第十三章/地面/speaker-voiceprint-bottom-platform.png";
+import speakerVoiceprintPlatformShelfUrl from "../../../素材/第十三章/平台/speaker-voiceprint-platform-shelf.png";
+import devBoardBottomPlatformUrl from "../../../素材/第十四章/地面/dev-board-bottom-platform.png";
+import devBoardPlatformShelfUrl from "../../../素材/第十四章/平台/dev-board-platform-shelf.png";
 import electromagneticTrapBeamSheetUrl from "../../assets/hazards/electromagnetic-trap-beam-sheet.png";
 import wrongGatewayShredderSheetUrl from "../../assets/hazards/wrong-gateway-shredder-sheet.png";
 import { createPixelTextures } from "./createPixelTextures";
@@ -105,6 +125,26 @@ export class BootScene extends Phaser.Scene {
     this.load.image("printer-belly-bg", printerBellyBackgroundUrl);
     this.load.image("speaker-voiceprint-bg", speakerVoiceprintBackgroundUrl);
     this.load.image("dev-board-bg", devBoardBackgroundUrl);
+    this.load.image("p-drive-bottom-platform", pDriveBottomPlatformUrl);
+    this.load.image("p-drive-platform-shelf", pDrivePlatformShelfUrl);
+    this.load.image("leder-d-drive-bottom-platform", lederDDriveBottomPlatformUrl);
+    this.load.image("leder-d-drive-platform-shelf", lederDDrivePlatformShelfUrl);
+    this.load.image("c-wall-bottom-platform", cWallBottomPlatformUrl);
+    this.load.image("c-wall-platform-shelf", cWallPlatformShelfUrl);
+    this.load.image("leder-c-drive-bottom-platform", lederCDriveBottomPlatformUrl);
+    this.load.image("leder-c-drive-platform-shelf", lederCDrivePlatformShelfUrl);
+    this.load.image("router-core-bottom-platform", routerCoreBottomPlatformUrl);
+    this.load.image("router-core-platform-shelf", routerCorePlatformShelfUrl);
+    this.load.image("nas-graveyard-bottom-platform", nasGraveyardBottomPlatformUrl);
+    this.load.image("nas-graveyard-platform-shelf", nasGraveyardPlatformShelfUrl);
+    this.load.image("camera-eye-bottom-platform", cameraEyeBottomPlatformUrl);
+    this.load.image("camera-eye-platform-shelf", cameraEyePlatformShelfUrl);
+    this.load.image("printer-belly-bottom-platform", printerBellyBottomPlatformUrl);
+    this.load.image("printer-belly-platform-shelf", printerBellyPlatformShelfUrl);
+    this.load.image("speaker-voiceprint-bottom-platform", speakerVoiceprintBottomPlatformUrl);
+    this.load.image("speaker-voiceprint-platform-shelf", speakerVoiceprintPlatformShelfUrl);
+    this.load.image("dev-board-bottom-platform", devBoardBottomPlatformUrl);
+    this.load.image("dev-board-platform-shelf", devBoardPlatformShelfUrl);
     this.load.spritesheet(ELECTROMAGNETIC_TRAP_TEXTURE_KEY, electromagneticTrapBeamSheetUrl, {
       frameWidth: 384,
       frameHeight: 64,

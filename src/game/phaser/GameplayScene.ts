@@ -13,6 +13,8 @@ import { GameController } from "../simulation/GameController";
 import type { BossDef } from "../types";
 import type { ChapterId } from "../types";
 import { getCodeLifeChapterConfig, isCodeLifeChapterId } from "./codeLife/CodeLifeChapterConfig";
+import { getCodeLifeSurfaceTextureKeys } from "./codeLife/CodeLifeVisuals";
+import { createChapterMusicController, type ChapterMusicController } from "./chapterMusic";
 import { createGameKeys, type GameKeyName } from "./inputConfig";
 import {
   getPetAnimationKey,
@@ -240,6 +242,9 @@ const CODE_REBIRTH_LIFEFORM_BODY = {
 const TRASH_MOUNTAIN_BOTTOM_PLATFORM_VISUAL_HEIGHT = 238;
 const TRASH_MOUNTAIN_FLOATING_PLATFORM_VISUAL_HEIGHT = 112;
 const TRASH_MOUNTAIN_PLATFORM_SURFACE_OFFSET = 4;
+const LATE_CHAPTER_BOTTOM_PLATFORM_VISUAL_HEIGHT = 126;
+const LATE_CHAPTER_FLOATING_PLATFORM_VISUAL_HEIGHT = 82;
+const LATE_CHAPTER_PLATFORM_SURFACE_OFFSET = 0;
 const TRASH_MOUNTAIN_EXIT_SCALE = 0.82;
 const TRASH_MOUNTAIN_BOSS_SCALE = 0.72;
 const CURSOR_HUNTER_SIZE_RATIO = 0.6;
@@ -253,6 +258,7 @@ export class GameplayScene extends Phaser.Scene {
   private controller!: GameController;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<GameKeyName, Phaser.Input.Keyboard.Key>;
+  private chapterMusic?: ChapterMusicController;
   private player?: Phaser.Physics.Arcade.Sprite;
   private cursorHunter?: Phaser.Physics.Arcade.Sprite;
   private cursorWarning?: Phaser.GameObjects.Arc;
@@ -319,6 +325,7 @@ export class GameplayScene extends Phaser.Scene {
     this.controller = new GameController();
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = createGameKeys(this.input);
+    this.chapterMusic = createChapterMusicController();
 
     window.addEventListener(UI_EVENTS.START_RUN, this.handleStartRun as EventListener);
     window.addEventListener(UI_EVENTS.CONTINUE_RUN, this.handleContinueRun as EventListener);
@@ -342,6 +349,8 @@ export class GameplayScene extends Phaser.Scene {
       window.removeEventListener(UI_EVENTS.GM_DEFEAT_BOSS, this.handleGmDefeatBoss as EventListener);
       window.removeEventListener(UI_EVENTS.TOGGLE_GM_FEATURE, this.handleToggleGmFeature as EventListener);
       window.removeEventListener(UI_EVENTS.SELECT_GM_CHAPTER, this.handleSelectGmChapter as EventListener);
+      this.chapterMusic?.destroy();
+      this.chapterMusic = undefined;
     });
 
     this.rebuildChapter();
@@ -407,6 +416,7 @@ export class GameplayScene extends Phaser.Scene {
   private readonly handleChooseEnding = (event: Event): void => {
     const detail = (event as CustomEvent<ChooseEndingDetail>).detail;
     this.controller.chooseEnding(detail.endingId);
+    this.syncChapterMusic();
     this.emitState();
   };
 
@@ -451,6 +461,7 @@ export class GameplayScene extends Phaser.Scene {
   private togglePause(): void {
     if (this.controller.status === "running" || this.controller.status === "paused") {
       this.controller.togglePause();
+      this.syncChapterMusic();
       this.emitState();
     }
   }
@@ -517,6 +528,7 @@ export class GameplayScene extends Phaser.Scene {
     this.createGatewayMonsters();
     this.createCursorHunter();
     this.createCollisions();
+    this.syncChapterMusic();
     this.emitState();
   }
 
@@ -590,6 +602,8 @@ export class GameplayScene extends Phaser.Scene {
       .setOrigin(0)
       .setAlpha(0.035)
       .setDepth(-23);
+
+    this.drawLateChapterPlatformOverlays();
   }
 
   private drawCursorHuntBackdrop(): void {
@@ -757,6 +771,31 @@ export class GameplayScene extends Phaser.Scene {
     });
   }
 
+  private drawLateChapterPlatformOverlays(): void {
+    const chapter = this.controller.currentChapter();
+    const platformKeys = getCodeLifeSurfaceTextureKeys(chapter.id);
+    if (!platformKeys) {
+      return;
+    }
+
+    const platformDefs = getPlatformDefs(chapter.id, chapter.index);
+    platformDefs.forEach(([x, y, width, height], index) => {
+      const top = y - height / 2;
+      const isBottomPlatform = index === 0;
+      const key = isBottomPlatform ? platformKeys.bottomPlatform : platformKeys.platformShelf;
+      const displayWidth = isBottomPlatform ? width + 90 : width + 54;
+      const displayHeight = isBottomPlatform
+        ? LATE_CHAPTER_BOTTOM_PLATFORM_VISUAL_HEIGHT
+        : LATE_CHAPTER_FLOATING_PLATFORM_VISUAL_HEIGHT;
+
+      this.add
+        .image(x, top - LATE_CHAPTER_PLATFORM_SURFACE_OFFSET, key)
+        .setOrigin(0.5, 0)
+        .setDisplaySize(displayWidth, displayHeight)
+        .setDepth(isBottomPlatform ? -5.9 : -5.6);
+    });
+  }
+
   private drawWrongGatewayExtractedLayer(): void {
     const place = (key: string, x: number, y: number, width: number, height: number, depth: number): void => {
       this.add
@@ -848,7 +887,8 @@ export class GameplayScene extends Phaser.Scene {
       chapter.id === "cursor-hunt" ||
       chapter.id === "wrong-gateway" ||
       chapter.id === "code-rebirth" ||
-      chapter.id === "trash-mountain";
+      chapter.id === "trash-mountain" ||
+      getCodeLifeSurfaceTextureKeys(chapter.id) !== undefined;
 
     for (const [x, y, width, height] of platformDefs) {
       const platform =
@@ -2570,6 +2610,8 @@ export class GameplayScene extends Phaser.Scene {
     this.controller.advanceChapter();
     if (this.controller.status !== "ending-choice") {
       this.rebuildChapter();
+    } else {
+      this.syncChapterMusic();
     }
     this.emitState();
   }
@@ -2931,6 +2973,27 @@ export class GameplayScene extends Phaser.Scene {
     }
     this.worldAudioContext = new AudioContextConstructor();
     return this.worldAudioContext;
+  }
+
+  private syncChapterMusic(): void {
+    if (!this.chapterMusic) {
+      return;
+    }
+
+    const shouldPlay = Boolean(this.controller.state.prompt) && (this.controller.status === "running" || this.controller.status === "paused");
+    if (!shouldPlay) {
+      this.chapterMusic.stop();
+      return;
+    }
+
+    if (this.controller.status === "paused") {
+      this.chapterMusic.setPaused(true);
+      this.chapterMusic.playChapter(this.controller.currentChapter().id);
+      return;
+    }
+
+    this.chapterMusic.playChapter(this.controller.currentChapter().id);
+    this.chapterMusic.setPaused(false);
   }
 
   private emitState(): void {

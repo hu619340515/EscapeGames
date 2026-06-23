@@ -449,6 +449,7 @@ export class GameplayScene extends Phaser.Scene {
   private readonly worldAudioCooldownUntil = new Map<WorldSfxId, number>();
   private bossHp = 0;
   private bossMaxHp = 0;
+  private bossDefeatPending = false;
   private nextBossAttackAt = 0;
   private bossAttackCursor = 0;
   private exitCooldownUntil = 0;
@@ -735,6 +736,7 @@ export class GameplayScene extends Phaser.Scene {
     this.gatewayIpMissingPrompt = undefined;
     this.bossHp = 0;
     this.bossMaxHp = 0;
+    this.bossDefeatPending = false;
     this.nextBossAttackAt = 0;
     this.bossAttackCursor = 0;
     this.exitCooldownUntil = this.time.now + 700;
@@ -1599,6 +1601,7 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
+    this.bossDefeatPending = false;
     const chapter = this.controller.currentChapter();
     const bossPosition = this.getBossPosition(chapter.id);
     const bossTexture = this.getBossTextureKey(boss);
@@ -1878,7 +1881,9 @@ export class GameplayScene extends Phaser.Scene {
     if (this.bossSprite) {
       this.colliders.push(
         this.physics.add.overlap(this.player, this.bossSprite, () => {
-          this.damagePlayer(7);
+          if (!this.bossDefeatPending && this.bossHp > 0) {
+            this.damagePlayer(7);
+          }
         }),
       );
 
@@ -1894,7 +1899,7 @@ export class GameplayScene extends Phaser.Scene {
     if (this.playerProjectiles) {
       this.colliders.push(
         this.physics.add.collider(this.playerProjectiles, this.platforms, (projectile) => {
-          (projectile as Phaser.GameObjects.GameObject).destroy();
+          this.claimPlayerProjectile(projectile as Phaser.GameObjects.GameObject)?.destroy();
         }),
       );
     }
@@ -1954,9 +1959,17 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private handlePlayerProjectileBossHit(projectileObject: Phaser.GameObjects.GameObject): void {
-    const projectile = projectileObject as Phaser.Physics.Arcade.Sprite;
+    const projectile = this.claimPlayerProjectile(projectileObject);
+    if (!projectile) {
+      return;
+    }
+
     const damage = (projectile.getData("damage") as number | undefined) ?? PLAYER_THROW_DAMAGE;
     projectile.destroy();
+    if (!this.bossSprite?.active || this.bossDefeatPending || this.bossHp <= 0 || !this.controller.currentBoss()) {
+      return;
+    }
+
     this.damageBoss(damage);
   }
 
@@ -1964,9 +1977,13 @@ export class GameplayScene extends Phaser.Scene {
     projectileObject: Phaser.GameObjects.GameObject,
     monsterObject: Phaser.GameObjects.GameObject,
   ): void {
-    const projectile = projectileObject as Phaser.Physics.Arcade.Sprite;
     const monster = monsterObject as Phaser.Physics.Arcade.Sprite;
-    if (!projectile.active || !monster.active || monster.getData("stomped") === true) {
+    if (!monster.active || monster.getData("stomped") === true) {
+      return;
+    }
+
+    const projectile = this.claimPlayerProjectile(projectileObject);
+    if (!projectile) {
       return;
     }
 
@@ -2004,6 +2021,20 @@ export class GameplayScene extends Phaser.Scene {
       ease: "Quad.easeIn",
       onComplete: () => monster.destroy(),
     });
+  }
+
+  private claimPlayerProjectile(projectileObject: Phaser.GameObjects.GameObject): Phaser.Physics.Arcade.Sprite | undefined {
+    const projectile = projectileObject as Phaser.Physics.Arcade.Sprite;
+    if (!projectile.active || projectile.getData("consumed") === true) {
+      return undefined;
+    }
+
+    projectile.setData("consumed", true);
+    const body = projectile.body as Phaser.Physics.Arcade.Body | null;
+    if (body) {
+      body.enable = false;
+    }
+    return projectile;
   }
 
   private updateCursorHunter(time: number): void {
@@ -2147,9 +2178,12 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     this.gatewayMonsters.children.iterate((child) => {
+      if (!child) {
+        return true;
+      }
       const monster = child as Phaser.Physics.Arcade.Sprite;
       if (!monster.active || monster.getData("stomped") === true) {
-        return false;
+        return true;
       }
 
       const body = monster.body as Phaser.Physics.Arcade.Body;
@@ -2598,9 +2632,12 @@ export class GameplayScene extends Phaser.Scene {
     }
 
     this.playerProjectiles.children.iterate((child) => {
+      if (!child) {
+        return true;
+      }
       const projectile = child as Phaser.Physics.Arcade.Sprite;
       if (!projectile.active) {
-        return false;
+        return true;
       }
 
       const direction = (projectile.getData("direction") as number | undefined) ?? 1;
@@ -2615,7 +2652,7 @@ export class GameplayScene extends Phaser.Scene {
         projectile.y < -120 ||
         projectile.y > this.currentWorldHeight + 120
       ) {
-        projectile.destroy();
+        this.claimPlayerProjectile(projectile)?.destroy();
       }
 
       return true;
@@ -2796,7 +2833,7 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private updateBoss(time: number): void {
-    if (!this.bossSprite || !this.player) {
+    if (!this.bossSprite || !this.player || this.bossDefeatPending || this.bossHp <= 0) {
       return;
     }
 
@@ -2821,7 +2858,7 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private fireBossAttack(): void {
-    if (!this.bossSprite || !this.player || !this.projectiles) {
+    if (!this.bossSprite || !this.player || !this.projectiles || this.bossDefeatPending || this.bossHp <= 0) {
       return;
     }
     const boss = this.controller.currentBoss();
@@ -2867,7 +2904,7 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private damageBossIfClose(amount: number, range: number): void {
-    if (!this.player || !this.bossSprite) {
+    if (!this.player || !this.bossSprite || this.bossDefeatPending || this.bossHp <= 0) {
       return;
     }
     const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.bossSprite.x, this.bossSprite.y);
@@ -2878,7 +2915,7 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private damageBoss(amount: number): void {
-    if (!this.bossSprite) {
+    if (!this.bossSprite || this.bossDefeatPending || this.bossHp <= 0 || !this.controller.currentBoss()) {
       return;
     }
 
@@ -2887,7 +2924,7 @@ export class GameplayScene extends Phaser.Scene {
     this.bossSprite.setTintFill(0xffffff);
     this.time.delayedCall(70, () => {
       const boss = this.controller.currentBoss();
-      if (this.bossSprite && boss) {
+      if (this.bossSprite && boss && !this.bossDefeatPending) {
         this.bossSprite.clearTint();
         if (this.getBossTextureKey(boss) === "boss-core") {
           this.bossSprite.setTint(boss.color);
@@ -2897,9 +2934,20 @@ export class GameplayScene extends Phaser.Scene {
     this.updateBossHpBar();
 
     if (this.bossHp <= 0) {
+      this.bossDefeatPending = true;
+      this.bossSprite.setData("defeated", true);
+      const bossBody = this.bossSprite.body as Phaser.Physics.Arcade.Body | null;
+      if (bossBody) {
+        bossBody.enable = false;
+      }
+      this.bossSprite.setVelocity(0, 0);
       this.controller.defeatCurrentBoss();
       this.emitState();
-      this.time.delayedCall(550, () => this.rebuildChapter());
+      this.time.delayedCall(550, () => {
+        if (this.bossDefeatPending) {
+          this.rebuildChapter();
+        }
+      });
     }
   }
 

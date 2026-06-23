@@ -148,6 +148,9 @@ function createFakeElement(): FakeElement {
 
 describe("CodeLifeHud payload conversion", () => {
   it("maps late device abilities to their runtime interaction keys", () => {
+    expect(CODE_LIFE_ABILITY_INPUT_LABELS.coil).toBe("F");
+    expect(CODE_LIFE_ABILITY_INPUT_LABELS["permission-rend"]).toBe("F");
+    expect(CODE_LIFE_ABILITY_INPUT_LABELS["quarantine-invert"]).toBe("F");
     expect(CODE_LIFE_ABILITY_INPUT_LABELS["vision-takeover"]).toBe("Q");
     expect(CODE_LIFE_ABILITY_INPUT_LABELS["material-mark"]).toBe("K");
     expect(CODE_LIFE_ABILITY_INPUT_LABELS["voiceprint-disguise"]).toBe("L");
@@ -208,7 +211,7 @@ describe("CodeLifeHud payload conversion", () => {
     const ability = {
       id: "permission-rend",
       label: "Permission Rend",
-      inputLabel: "J",
+      inputLabel: "F",
       readiness: "cooldown" as const,
       cooldownRatio: 0.45,
       chargeRatio: 0.25,
@@ -459,7 +462,7 @@ describe("CodeLifeHud render boundaries", () => {
         {
           id: "permission-rend",
           label: "Permission Rend",
-          inputLabel: "J",
+          inputLabel: "F",
           readiness: "locked",
           cooldownRatio: 0,
         },
@@ -483,14 +486,14 @@ describe("CodeLifeHud render boundaries", () => {
       current: "false",
       new: "false",
     });
-    expect(abilityStrip.children[1].textContent).toBe("J Permission Rend");
+    expect(abilityStrip.children[1].textContent).toBe("F Permission Rend");
   });
 
   it("compacts long late-game ability strips without hiding the current ability", () => {
     const abilities = Array.from({ length: 20 }, (_, index) => ({
       id: `ability-${index}`,
       label: `Ability ${index}`,
-      inputLabel: index % 2 === 0 ? "E" : "J",
+      inputLabel: index % 2 === 0 ? "E" : "F",
       readiness: "ready" as const,
       cooldownRatio: 0,
     }));

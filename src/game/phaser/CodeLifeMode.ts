@@ -342,7 +342,7 @@ export class CodeLifeMode {
     this.tryStartAmbienceFromInput();
     this.updateAmbienceMix();
 
-    if (Phaser.Input.Keyboard.JustDown(this.options.keys.j)) {
+    if (Phaser.Input.Keyboard.JustDown(this.options.keys.f)) {
       this.useTear(time);
     }
     if (Phaser.Input.Keyboard.JustDown(this.options.keys.k)) {

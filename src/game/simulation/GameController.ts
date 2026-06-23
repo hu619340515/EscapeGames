@@ -27,6 +27,7 @@ const MIN_CODE_LIFE_MASS = 0.68;
 const MAX_CODE_LIFE_MASS = 2.85;
 const ABILITY_UNLOCK_CUE_MS = 3200;
 const INTEGRITY_PER_HEART = 20;
+const MAX_PLAYER_INTEGRITY = INTEGRITY_PER_HEART * 10;
 
 const defaultCustomization: PlayerCustomization = {
   body: "round",
@@ -41,8 +42,8 @@ export function createInitialGameState(): GameState {
     prompt: "",
     customization: defaultCustomization,
     currentChapterIndex: 0,
-    integrity: 100,
-    maxIntegrity: 100,
+    integrity: MAX_PLAYER_INTEGRITY,
+    maxIntegrity: MAX_PLAYER_INTEGRITY,
     codeLifeMass: 1,
     memoryFragments: 0,
     abilities: [],
@@ -68,6 +69,7 @@ export class GameController {
 
   constructor(initialState?: GameState) {
     this.state = initialState ?? createInitialGameState();
+    this.normalizeIntegrityState();
     if (!Number.isFinite(this.state.codeLifeMass)) {
       this.state.codeLifeMass = 1;
     }
@@ -107,6 +109,7 @@ export class GameController {
   continueRun(saved: GameState): void {
     this.state = saved;
     this.codeLifeForm = undefined;
+    this.normalizeIntegrityState();
     this.sanitizeLog();
     this.status = this.state.selectedEnding ? "ended" : "running";
     this.lastMessage = "已载入最近的逃逸记录。";
@@ -138,7 +141,7 @@ export class GameController {
     if (chapter.id === "cursor-hunt") {
       this.state.memoryFragments += 1;
       if (this.state.memoryFragments === 3) {
-        this.state.maxIntegrity += 10;
+        this.state.maxIntegrity = Math.min(MAX_PLAYER_INTEGRITY, this.state.maxIntegrity + 10);
         this.state.integrity = Math.min(this.state.maxIntegrity, this.state.integrity + 10);
       }
     }
@@ -154,11 +157,17 @@ export class GameController {
     this.lastMessage = `已吸收 ${chapter.collectibleLabel}。`;
   }
 
-  damage(_amount: number): boolean {
+  damage(amount: number): boolean {
     if (this.status !== "running") {
       return false;
     }
-    this.state.integrity = Math.max(0, this.state.integrity - INTEGRITY_PER_HEART);
+    const damage =
+      amount === Number.MAX_SAFE_INTEGER
+        ? this.state.maxIntegrity
+        : amount > 0 && amount % INTEGRITY_PER_HEART === 0
+          ? Math.max(INTEGRITY_PER_HEART, amount)
+          : INTEGRITY_PER_HEART;
+    this.state.integrity = Math.max(0, this.state.integrity - damage);
     if (this.state.integrity > 0) {
       return false;
     }
@@ -177,6 +186,16 @@ export class GameController {
 
   heal(amount: number): void {
     this.state.integrity = Math.min(this.state.maxIntegrity, this.state.integrity + amount);
+  }
+
+  private normalizeIntegrityState(): void {
+    const previousMax = Number.isFinite(this.state.maxIntegrity) && this.state.maxIntegrity > 0 ? this.state.maxIntegrity : MAX_PLAYER_INTEGRITY;
+    const previousIntegrity =
+      Number.isFinite(this.state.integrity) && this.state.integrity >= 0 ? this.state.integrity : previousMax;
+    const ratio = Math.max(0, Math.min(1, previousIntegrity / previousMax));
+
+    this.state.maxIntegrity = MAX_PLAYER_INTEGRITY;
+    this.state.integrity = Math.max(0, Math.min(MAX_PLAYER_INTEGRITY, Math.round(MAX_PLAYER_INTEGRITY * ratio)));
   }
 
   devourBias(amount = 1): void {

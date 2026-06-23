@@ -12,7 +12,17 @@ export const PET_SPRITE_TEXTURE_KEYS: Record<PetSpecies, string> = {
   cat: "player-pet-cat",
 };
 
-const ANIMAL_PET_CHAPTER_IDS = new Set<ChapterId>(["cursor-hunt", "wrong-gateway"]);
+const ANIMAL_PET_CHAPTER_IDS = new Set<ChapterId>([
+  "cursor-hunt",
+  "wrong-gateway",
+  "leder-c-drive",
+  "router-core",
+  "nas-graveyard",
+  "camera-eye",
+  "printer-belly",
+  "speaker-voiceprint",
+  "dev-board",
+]);
 
 export function getPetTextureKey(petSpecies: PetSpecies): string {
   return PET_SPRITE_TEXTURE_KEYS[petSpecies];

@@ -21,6 +21,20 @@ export interface WorldBounds {
   height: number;
 }
 
+export interface ChapterEnemyRoute {
+  readonly x: number;
+  readonly y: number;
+  readonly minX: number;
+  readonly maxX: number;
+  readonly speed: number;
+  readonly hp: number;
+  readonly contactDamage: number;
+  readonly displayWidth: number;
+  readonly displayHeight: number;
+}
+
+export const HEALTH_PICKUP_COUNT = 4;
+
 const CURSOR_HUNT_PLATFORM_SURFACE_HEIGHT = 12;
 
 function cursorHuntSurface(
@@ -157,37 +171,40 @@ const codeRebirthHazards = [
 
 const trashMountainPlatforms: PlatformDef[] = [
   [720, 2528, 1380, 84],
-  [250, 2294, 330, 34],
-  [620, 2118, 310, 34],
-  [1038, 1944, 340, 34],
-  [780, 1766, 280, 34],
-  [390, 1588, 330, 34],
-  [742, 1408, 290, 34],
-  [1110, 1228, 330, 34],
-  [840, 1044, 300, 34],
-  [460, 862, 340, 34],
-  [805, 682, 290, 34],
-  [1120, 512, 350, 34],
-  [776, 354, 430, 34],
-  [1210, 324, 260, 34],
+  [250, 2367, 380, 34],
+  [610, 2227, 360, 34],
+  [980, 2087, 380, 34],
+  [690, 1947, 320, 34],
+  [390, 1807, 360, 34],
+  [720, 1667, 330, 34],
+  [1080, 1527, 360, 34],
+  [820, 1387, 330, 34],
+  [500, 1247, 360, 34],
+  [850, 1107, 330, 34],
+  [1160, 967, 360, 34],
+  [840, 827, 330, 34],
+  [520, 687, 360, 34],
+  [860, 547, 340, 34],
+  [1135, 407, 340, 34],
+  [1180, 302, 360, 34],
 ];
 
 const trashMountainCollectibles = [
-  { x: 245, y: 2254 },
-  { x: 650, y: 2078 },
-  { x: 1075, y: 1904 },
-  { x: 410, y: 1548 },
-  { x: 1110, y: 1188 },
-  { x: 470, y: 822 },
-  { x: 1185, y: 472 },
+  { x: 245, y: 2310 },
+  { x: 650, y: 2170 },
+  { x: 1015, y: 2030 },
+  { x: 410, y: 1760 },
+  { x: 1110, y: 1480 },
+  { x: 525, y: 642 },
+  { x: 1185, y: 352 },
 ] as const;
 
 const trashMountainHazards = [
   { x: 520, y: 2460 },
-  { x: 900, y: 1850 },
-  { x: 610, y: 1338 },
-  { x: 1020, y: 936 },
-  { x: 690, y: 594 },
+  { x: 870, y: 1900 },
+  { x: 610, y: 1200 },
+  { x: 1020, y: 920 },
+  { x: 690, y: 505 },
 ] as const;
 
 export function getWorldBounds(chapterId: ChapterId): WorldBounds {
@@ -293,6 +310,103 @@ export function getCollectiblePosition(
     x: 260 + index * 250,
     y: 520 - (index % 3) * 90 + (chapterIndex % 2) * 30,
   };
+}
+
+function platformTop(platform: PlatformDef): number {
+  return platform[1] - platform[3] / 2;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getWalkablePlatforms(chapterId: ChapterId, chapterIndex: number): PlatformDef[] {
+  return getPlatformDefs(chapterId, chapterIndex)
+    .filter((platform) => platform[2] >= 120)
+    .sort((a, b) => platformTop(b) - platformTop(a));
+}
+
+export function getHealthPickupPosition(
+  index: number,
+  chapterId: ChapterId,
+  chapterIndex: number,
+): { x: number; y: number } {
+  const platforms = getWalkablePlatforms(chapterId, chapterIndex);
+  const bounds = getWorldBounds(chapterId);
+  const platform =
+    platforms[
+      Math.min(
+        platforms.length - 1,
+        Math.round((clamp(index, 0, HEALTH_PICKUP_COUNT - 1) / Math.max(1, HEALTH_PICKUP_COUNT - 1)) * (platforms.length - 1)),
+      )
+    ] ?? [bounds.width / 2, bounds.height - 70, 320, 28];
+  const offsets = [-0.28, 0.26, -0.2, 0.32] as const;
+  const x = clamp(platform[0] + platform[2] * offsets[index % offsets.length], 48, bounds.width - 48);
+
+  return {
+    x,
+    y: clamp(platformTop(platform) - 38, 42, bounds.height - 48),
+  };
+}
+
+export function getThrowSkillPickupPosition(
+  chapterId: ChapterId,
+  chapterIndex: number,
+  preferStartPlatform = false,
+): { x: number; y: number } {
+  const platforms = getWalkablePlatforms(chapterId, chapterIndex);
+  const bounds = getWorldBounds(chapterId);
+  const platform =
+    platforms[preferStartPlatform ? 0 : Math.min(platforms.length - 1, Math.max(0, Math.floor(platforms.length * 0.22)))] ?? [
+      bounds.width / 2,
+      bounds.height - 92,
+      320,
+      28,
+    ];
+  const x = preferStartPlatform
+    ? clamp(platform[0] - platform[2] * 0.38, 56, bounds.width - 56)
+    : clamp(platform[0] + Math.min(180, platform[2] * 0.22), 56, bounds.width - 56);
+
+  return {
+    x,
+    y: clamp(platformTop(platform) - 46, 52, bounds.height - 56),
+  };
+}
+
+export function getChapterEnemyRoutes(chapterId: ChapterId, chapterIndex: number): ChapterEnemyRoute[] {
+  const platforms = getWalkablePlatforms(chapterId, chapterIndex);
+  const bounds = getWorldBounds(chapterId);
+  const spawnPlatforms = platforms.length > 0 ? platforms : [[bounds.width / 2, bounds.height - 80, 420, 32] as PlatformDef];
+  const enemyCount = Math.min(8, Math.max(1, 1 + Math.floor(chapterIndex / 2)));
+  const hp = Math.min(4, 1 + Math.floor((chapterIndex - 1) / 4));
+  const contactDamage = 20 + Math.floor((chapterIndex - 1) / 5) * 20;
+
+  return Array.from({ length: enemyCount }, (_, index) => {
+    const platform = spawnPlatforms[(index * 2 + chapterIndex) % spawnPlatforms.length];
+    const top = platformTop(platform);
+    const platformLeft = platform[0] - platform[2] / 2 + 34;
+    const platformRight = platform[0] + platform[2] / 2 - 34;
+    const offsetDirection = index % 2 === 0 ? -1 : 1;
+    const x = clamp(platform[0] + offsetDirection * Math.min(platform[2] * 0.22, 170), platformLeft, platformRight);
+    const patrolSpan = Math.min(platform[2] - 72, 220 + chapterIndex * 18 + index * 10);
+    const minX = clamp(x - patrolSpan / 2, platformLeft, platformRight);
+    const maxX = clamp(x + patrolSpan / 2, platformLeft, platformRight);
+    const speed = (index % 2 === 0 ? 1 : -1) * (42 + chapterIndex * 6 + index * 4);
+    const displayWidth = Math.min(58, 34 + chapterIndex * 1.7);
+    const displayHeight = Math.min(42, 24 + chapterIndex * 1.15);
+
+    return {
+      x,
+      y: clamp(top - displayHeight / 2 - 2, 32, bounds.height - 32),
+      minX,
+      maxX,
+      speed,
+      hp,
+      contactDamage,
+      displayWidth,
+      displayHeight,
+    };
+  });
 }
 
 export function getHazardCount(chapterId: ChapterId, chapterIndex: number): number {

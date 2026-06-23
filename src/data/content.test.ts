@@ -128,10 +128,10 @@ describe("full flow smoke", () => {
     controller.startNewRun("test", customization);
 
     controller.damage(7);
-    expect(controller.state.integrity).toBe(80);
+    expect(controller.state.integrity).toBe(180);
 
     controller.damage(99);
-    expect(controller.state.integrity).toBe(60);
+    expect(controller.state.integrity).toBe(160);
   });
 
   it("carries realtime CodeLife boss HUD snapshots through payload and clears them on chapter entry", () => {

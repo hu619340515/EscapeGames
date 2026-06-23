@@ -193,6 +193,21 @@ describe("renderHudAndEnding late platform mode", () => {
       "投掷数据刃",
     ]);
   });
+
+  it("renders the expanded ten-heart health cap", () => {
+    const refs = createRefs();
+    const payload = createPayload();
+    payload.state.integrity = 200;
+    payload.state.maxIntegrity = 200;
+    globalThis.document = {
+      createElement: () => createFakeElement() as unknown as HTMLElement,
+    } as unknown as Document;
+
+    renderHudAndEnding(payload, refs);
+
+    expect(refs.integrityHearts.dataset.value).toBe("10/10");
+    expect(asFakeElement(refs.integrityHearts).children).toHaveLength(10);
+  });
 });
 
 describe("renderHudAndEnding CodeLife mode", () => {

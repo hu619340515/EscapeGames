@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 
-export type GameKeyName = "w" | "a" | "s" | "d" | "j" | "k" | "l" | "q" | "e" | "v" | "n" | "b" | "esc" | "space";
+export type GameKeyName = "w" | "a" | "s" | "d" | "f" | "k" | "l" | "q" | "e" | "v" | "n" | "b" | "esc" | "space";
 
 export function createGameKeys(input: Phaser.Input.InputPlugin): Record<GameKeyName, Phaser.Input.Keyboard.Key> {
   const keyboard = input.keyboard;
@@ -13,7 +13,7 @@ export function createGameKeys(input: Phaser.Input.InputPlugin): Record<GameKeyN
     a: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
     s: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
     d: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-    j: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
+    f: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F),
     k: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
     l: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L),
     q: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q),

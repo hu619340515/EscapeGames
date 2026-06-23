@@ -161,7 +161,7 @@ export interface CodeLifeHudPayloadOverrides {
 
 export const CODE_LIFE_ABILITY_INPUT_LABELS: Partial<Record<AbilityId, string>> = {
   cling: "SPACE",
-  coil: "J",
+  coil: "F",
   infiltrate: "L",
   "devour-code": "K",
   "ping-sense": "Q",
@@ -170,9 +170,9 @@ export const CODE_LIFE_ABILITY_INPUT_LABELS: Partial<Record<AbilityId, string>> 
   "devour-upgrade": "K",
   "clone-control": "E",
   "reverse-index": "Q",
-  "permission-rend": "J",
+  "permission-rend": "F",
   "process-parasite": "K",
-  "quarantine-invert": "J",
+  "quarantine-invert": "F",
   "backup-anchor": "L",
   "admin-token-core": "E",
   "cross-device-jump": "E",

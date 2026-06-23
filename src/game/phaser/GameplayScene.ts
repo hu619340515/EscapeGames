@@ -11,7 +11,7 @@ import { chapters } from "../../data";
 import { themeTileKeys } from "../assets/manifest";
 import { GameController } from "../simulation/GameController";
 import type { BossDef } from "../types";
-import type { ChapterId } from "../types";
+import type { ChapterId, PetSpecies } from "../types";
 import { getCodeLifeChapterConfig, isCodeLifeChapterId } from "./codeLife/CodeLifeChapterConfig";
 import { getCodeLifeSurfaceTextureKeys } from "./codeLife/CodeLifeVisuals";
 import { createChapterMusicController, type ChapterMusicController } from "./chapterMusic";
@@ -23,12 +23,16 @@ import {
   type PetAnimationName,
 } from "./petSprites";
 import {
+  HEALTH_PICKUP_COUNT,
   getCollectibleCount,
   getCollectiblePosition,
+  getChapterEnemyRoutes,
+  getHealthPickupPosition,
   getHazardCount,
   getHazardPosition,
   getLadderDefs,
   getPlatformDefs,
+  getThrowSkillPickupPosition,
   getWorldBounds,
   JUMP_SPEED,
   PLAYER_SPEED,
@@ -95,6 +99,22 @@ interface ElectromagneticTrapInstance {
 interface WrongGatewayShredderGap {
   x: number;
   width: number;
+}
+
+type CollectiblePickupKind = "chapter" | "throw-skill-buff" | "health";
+
+interface PlayerMorphConfig {
+  readonly textureKey: string;
+  readonly lifeformScale: number;
+  readonly body: {
+    readonly width: number;
+    readonly height: number;
+    readonly offsetX: number;
+    readonly offsetY: number;
+  };
+  readonly tint?: number;
+  readonly petAlpha: number;
+  readonly petScale: number;
 }
 
 const GATEWAY_DIGIT_VALUES = [1, 9, 2, 1, 6, 8, 0, 0, 0, 0, 0, 1] as const;
@@ -222,7 +242,11 @@ const PLATFORM_THROW_UNLOCKED_FLAG = "platformThrowUnlocked";
 const PLAYER_THROW_COOLDOWN_MS = 420;
 const PLAYER_THROW_SPEED = 600;
 const PLAYER_THROW_DAMAGE = 22;
+const PLAYER_THROW_MONSTER_DAMAGE = 1;
 const PLAYER_THROW_TTL_MS = 1200;
+const HEALTH_PICKUP_AMOUNT = 20;
+const HEALTH_PICKUP_TEXTURE_KEY = "health-pickup";
+const PLATFORM_THROW_BUFF_TEXTURE_KEY = "platform-throw-buff";
 const PLAYER_STOMP_BOUNCE_SPEED = JUMP_SPEED * 0.72;
 const ELECTROMAGNETIC_TRAP_TEXTURE_KEY = "electromagnetic-trap-beam";
 const ELECTROMAGNETIC_TRAP_ANIMATION_KEY = "electromagnetic-trap-beam-flow";
@@ -232,12 +256,19 @@ const CODE_REBIRTH_BOTTOM_PLATFORM_DRAW_Y = 2312;
 const CODE_REBIRTH_BOTTOM_PLATFORM_HEIGHT = 300;
 const CODE_REBIRTH_FLOATING_PLATFORM_VISUAL_HEIGHT = 96;
 const CODE_REBIRTH_FLOATING_PLATFORM_SURFACE_OFFSET = 29;
-const CODE_REBIRTH_LIFEFORM_SCALE = 0.085;
+const CODE_REBIRTH_LIFEFORM_BASE_SCALE = 0.085;
+const CODE_REBIRTH_LIFEFORM_SCALE = CODE_REBIRTH_LIFEFORM_BASE_SCALE * 0.8;
 const CODE_REBIRTH_LIFEFORM_BODY = {
   width: 560,
   height: 260,
   offsetX: 607,
   offsetY: 520,
+} as const;
+const GENERATED_MORPH_LIFEFORM_BODY = {
+  width: 320,
+  height: 135,
+  offsetX: 160,
+  offsetY: 160,
 } as const;
 const TRASH_MOUNTAIN_BOTTOM_PLATFORM_VISUAL_HEIGHT = 238;
 const TRASH_MOUNTAIN_FLOATING_PLATFORM_VISUAL_HEIGHT = 112;
@@ -253,6 +284,76 @@ const CURSOR_HUNTER_BODY_HEIGHT = Math.round(46 * CURSOR_HUNTER_SIZE_RATIO);
 const CURSOR_HUNTER_WARNING_RADIUS = 54 * CURSOR_HUNTER_SIZE_RATIO;
 const CURSOR_HUNTER_LANDING_RADIUS = 44 * CURSOR_HUNTER_SIZE_RATIO;
 const GATEWAY_LADDER_CLIMB_SPEED = 185;
+const GENERATED_MORPH_LIFEFORM_TEXTURE_KEYS: Partial<Record<ChapterId, Record<PetSpecies, string>>> = {
+  "trash-mountain": {
+    cat: "trash-mountain-lifeform-cat",
+    panda: "trash-mountain-lifeform-panda",
+    pig: "trash-mountain-lifeform-pig",
+  },
+  "p-drive": {
+    cat: "p-drive-lifeform-cat",
+    panda: "p-drive-lifeform-panda",
+    pig: "p-drive-lifeform-pig",
+  },
+  "leder-d-drive": {
+    cat: "leder-d-drive-lifeform-cat",
+    panda: "leder-d-drive-lifeform-panda",
+    pig: "leder-d-drive-lifeform-pig",
+  },
+  "c-wall": {
+    cat: "c-wall-lifeform-cat",
+    panda: "c-wall-lifeform-panda",
+    pig: "c-wall-lifeform-pig",
+  },
+};
+const GENERATED_MORPH_LIFEFORM_SCALES: Partial<Record<ChapterId, number>> = {
+  "trash-mountain": 0.18,
+  "p-drive": 0.156,
+  "leder-d-drive": 0.136,
+  "c-wall": 0.118,
+};
+const CHAPTER_MINION_TEXTURE_KEYS: Record<ChapterId, string> = {
+  "cursor-hunt": "cursor-hunt-minion",
+  "wrong-gateway": "wrong-gateway-minion",
+  "code-rebirth": "code-rebirth-minion",
+  "trash-mountain": "trash-mountain-minion",
+  "p-drive": "p-drive-minion",
+  "leder-d-drive": "leder-d-drive-minion",
+  "c-wall": "c-wall-minion",
+  "leder-c-drive": "leder-c-drive-minion",
+  "router-core": "router-core-minion",
+  "nas-graveyard": "nas-graveyard-minion",
+  "camera-eye": "camera-eye-minion",
+  "printer-belly": "printer-belly-minion",
+  "speaker-voiceprint": "speaker-voiceprint-minion",
+  "dev-board": "dev-board-minion",
+};
+
+function getPlayerMorphConfig(chapterId: ChapterId, petSpecies: PetSpecies): PlayerMorphConfig | undefined {
+  if (chapterId === "code-rebirth") {
+    return {
+      textureKey: "code-rebirth-lifeform",
+      lifeformScale: CODE_REBIRTH_LIFEFORM_SCALE,
+      body: CODE_REBIRTH_LIFEFORM_BODY,
+      tint: 0x9ffcff,
+      petAlpha: 0,
+      petScale: 0,
+    };
+  }
+
+  const textureKeys = GENERATED_MORPH_LIFEFORM_TEXTURE_KEYS[chapterId];
+  if (!textureKeys) {
+    return undefined;
+  }
+
+  return {
+    textureKey: textureKeys[petSpecies],
+    lifeformScale: GENERATED_MORPH_LIFEFORM_SCALES[chapterId] ?? 0.14,
+    body: GENERATED_MORPH_LIFEFORM_BODY,
+    petAlpha: 0,
+    petScale: 0,
+  };
+}
 
 export class GameplayScene extends Phaser.Scene {
   private controller!: GameController;
@@ -304,6 +405,9 @@ export class GameplayScene extends Phaser.Scene {
   private pingUntil = 0;
   private lastAutoExitAt = 0;
   private playerPetTextureKey?: string;
+  private playerMorphPetSprite?: Phaser.GameObjects.Sprite;
+  private playerMorphPetTextureKey?: string;
+  private playerMorphConfig?: PlayerMorphConfig;
   private currentWorldWidth = 2400;
   private currentWorldHeight = 900;
   private limitedJumpCount = 0;
@@ -522,6 +626,7 @@ export class GameplayScene extends Phaser.Scene {
     this.createGatewayDigitPuzzle();
     this.createPlayer();
     this.createCollectibles();
+    this.createSupportPickups();
     this.createExit();
     this.createBoss();
     this.createHazardsForChapter();
@@ -544,6 +649,9 @@ export class GameplayScene extends Phaser.Scene {
     this.time.removeAllEvents();
     this.player = undefined;
     this.playerPetTextureKey = undefined;
+    this.playerMorphPetSprite = undefined;
+    this.playerMorphPetTextureKey = undefined;
+    this.playerMorphConfig = undefined;
     this.cursorHunter = undefined;
     this.cursorWarning = undefined;
     this.cursorLandingMarker = undefined;
@@ -711,10 +819,32 @@ export class GameplayScene extends Phaser.Scene {
 
   private drawTrashMountainVerticalBackdrop(tileKey: string): void {
     this.add
+      .rectangle(0, 0, this.currentWorldWidth, this.currentWorldHeight, 0x06090b, 1)
+      .setOrigin(0)
+      .setDepth(-26);
+
+    this.add
       .image(0, 0, "trash-mountain-bg")
       .setOrigin(0)
       .setDisplaySize(this.currentWorldWidth, this.currentWorldHeight)
+      .setAlpha(0.22)
+      .setDepth(-25);
+
+    this.add
+      .tileSprite(0, 0, this.currentWorldWidth, this.currentWorldHeight, "trash-mountain-bg-v2")
+      .setOrigin(0)
+      .setTileScale(0.82, 0.82)
+      .setTilePosition(180, 0)
+      .setAlpha(0.2)
       .setDepth(-24);
+
+    this.add
+      .tileSprite(0, 0, this.currentWorldWidth, this.currentWorldHeight, "trash-mountain-bg-tile-generated")
+      .setOrigin(0)
+      .setTileScale(1, 1)
+      .setTilePosition(0, 0)
+      .setAlpha(0.86)
+      .setDepth(-23.8);
 
     this.add
       .tileSprite(0, 0, this.currentWorldWidth, this.currentWorldHeight, tileKey)
@@ -1186,18 +1316,24 @@ export class GameplayScene extends Phaser.Scene {
 
   private createPlayer(): void {
     const chapter = this.controller.currentChapter();
+    const petSpecies = this.controller.state.customization.petSpecies;
+    const morphConfig = getPlayerMorphConfig(chapter.id, petSpecies);
     const shouldUseAnimalPet = isAnimalPetChapter(chapter.id);
-    const shouldUseCodeRebirthLifeform = chapter.id === "code-rebirth";
-    const texture = shouldUseCodeRebirthLifeform
-      ? "code-rebirth-lifeform"
+    const petTexture = getPetTextureKey(petSpecies);
+    const texture = morphConfig
+      ? morphConfig.textureKey
       : shouldUseAnimalPet
-        ? getPetTextureKey(this.controller.state.customization.petSpecies)
+        ? petTexture
         : "player-code";
     this.playerPetTextureKey = shouldUseAnimalPet ? texture : undefined;
+    this.playerMorphConfig = morphConfig;
     const startPosition = this.getPlayerStartPosition(chapter.id);
     this.player = this.physics.add.sprite(startPosition.x, startPosition.y, texture);
-    if (shouldUseCodeRebirthLifeform) {
-      this.player.setScale(CODE_REBIRTH_LIFEFORM_SCALE);
+    if (morphConfig) {
+      this.player.setScale(morphConfig.lifeformScale);
+      if (morphConfig.tint !== undefined) {
+        this.player.setTint(morphConfig.tint);
+      }
     }
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(15);
@@ -1207,9 +1343,9 @@ export class GameplayScene extends Phaser.Scene {
     this.limitedJumpCount = 0;
 
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (shouldUseCodeRebirthLifeform) {
-      body.setSize(CODE_REBIRTH_LIFEFORM_BODY.width, CODE_REBIRTH_LIFEFORM_BODY.height);
-      body.setOffset(CODE_REBIRTH_LIFEFORM_BODY.offsetX, CODE_REBIRTH_LIFEFORM_BODY.offsetY);
+    if (morphConfig) {
+      body.setSize(morphConfig.body.width, morphConfig.body.height);
+      body.setOffset(morphConfig.body.offsetX, morphConfig.body.offsetY);
     } else {
       body.setSize(shouldUseAnimalPet ? 22 : 24, shouldUseAnimalPet ? 28 : 18);
       body.setOffset(shouldUseAnimalPet ? 13 : 2, shouldUseAnimalPet ? 16 : 4);
@@ -1217,6 +1353,17 @@ export class GameplayScene extends Phaser.Scene {
 
     if (this.playerPetTextureKey) {
       this.player.play(getPetAnimationKey(this.playerPetTextureKey, "idle"));
+    }
+
+    if (morphConfig && morphConfig.petAlpha > 0) {
+      this.playerMorphPetTextureKey = petTexture;
+      this.playerMorphPetSprite = this.add
+        .sprite(this.player.x, this.player.y, petTexture)
+        .setDepth(16)
+        .setScale(morphConfig.petScale)
+        .setAlpha(morphConfig.petAlpha)
+        .setTint(0x9ffcff)
+        .play(getPetAnimationKey(petTexture, "idle"));
     }
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
@@ -1230,6 +1377,7 @@ export class GameplayScene extends Phaser.Scene {
       const item = this.collectibles!.create(x, y, "code-block") as Phaser.Physics.Arcade.Sprite;
       item.setTint(chapter.palette.accent);
       item.setData("label", chapter.collectibleLabel);
+      item.setData("pickupKind", "chapter" satisfies CollectiblePickupKind);
       item.refreshBody();
       this.tweens.add({
         targets: item,
@@ -1240,6 +1388,91 @@ export class GameplayScene extends Phaser.Scene {
         ease: "Sine.inOut",
       });
     }
+  }
+
+  private createSupportPickups(): void {
+    if (!this.collectibles) {
+      return;
+    }
+
+    const chapter = this.controller.currentChapter();
+    for (let index = 0; index < HEALTH_PICKUP_COUNT; index += 1) {
+      const { x, y } = getHealthPickupPosition(index, chapter.id, chapter.index);
+      const item = this.collectibles.create(x, y, HEALTH_PICKUP_TEXTURE_KEY) as Phaser.Physics.Arcade.Sprite;
+      item.setDepth(16);
+      item.setScale(0.62);
+      item.setData("pickupKind", "health" satisfies CollectiblePickupKind);
+      item.setData("label", "完整性补丁");
+      item.refreshBody();
+      const body = item.body as Phaser.Physics.Arcade.StaticBody;
+      body.setSize(34, 42);
+      body.updateFromGameObject();
+      this.tweens.add({
+        targets: item,
+        y: y - 7,
+        yoyo: true,
+        repeat: -1,
+        duration: 780 + index * 80,
+        ease: "Sine.inOut",
+      });
+    }
+
+    const isBossChapter = chapter.bossIds.length > 0;
+    if (this.hasPlatformThrowAttack() && !isBossChapter) {
+      return;
+    }
+
+    const { x, y } = getThrowSkillPickupPosition(chapter.id, chapter.index, isBossChapter);
+    const item = this.collectibles.create(x, y, PLATFORM_THROW_BUFF_TEXTURE_KEY) as Phaser.Physics.Arcade.Sprite;
+    item.setDepth(18);
+    item.setScale(isBossChapter ? 0.74 : 0.58);
+    item.setTint(chapter.palette.accent);
+    item.setData("pickupKind", "throw-skill-buff" satisfies CollectiblePickupKind);
+    item.setData("label", "投掷技能模块");
+    item.setData("bossChapterBuff", isBossChapter);
+    item.refreshBody();
+    const body = item.body as Phaser.Physics.Arcade.StaticBody;
+    body.setSize(isBossChapter ? 44 : 34, isBossChapter ? 58 : 48);
+    body.updateFromGameObject();
+    this.createThrowBuffBeacon(x, y, chapter.palette.accent, isBossChapter);
+    this.tweens.add({
+      targets: item,
+      y: y - (isBossChapter ? 14 : 10),
+      scaleX: isBossChapter ? 0.84 : 0.66,
+      scaleY: isBossChapter ? 0.84 : 0.66,
+      yoyo: true,
+      repeat: -1,
+      duration: 880,
+      ease: "Sine.inOut",
+    });
+  }
+
+  private createThrowBuffBeacon(x: number, y: number, color: number, isBossChapter: boolean): void {
+    const radius = isBossChapter ? 38 : 27;
+    const ring = this.add.circle(x, y, radius, color, 0.08).setStrokeStyle(2, color, isBossChapter ? 0.88 : 0.5).setDepth(17.5);
+    this.tweens.add({
+      targets: ring,
+      scale: { from: 0.8, to: isBossChapter ? 1.55 : 1.28 },
+      alpha: { from: isBossChapter ? 0.58 : 0.35, to: 0.05 },
+      repeat: -1,
+      duration: isBossChapter ? 680 : 920,
+      ease: "Sine.inOut",
+    });
+
+    if (!isBossChapter) {
+      return;
+    }
+
+    const core = this.add.circle(x, y, 8, 0xffffff, 0.28).setDepth(17.6);
+    this.tweens.add({
+      targets: core,
+      alpha: { from: 0.18, to: 0.52 },
+      scale: { from: 0.85, to: 1.35 },
+      yoyo: true,
+      repeat: -1,
+      duration: 420,
+      ease: "Sine.inOut",
+    });
   }
 
   private createExit(): void {
@@ -1431,28 +1664,35 @@ export class GameplayScene extends Phaser.Scene {
 
   private createGatewayMonsters(): void {
     const chapter = this.controller.currentChapter();
-    if (chapter.id !== "wrong-gateway" || !this.gatewayMonsters) {
+    if (!this.gatewayMonsters) {
       return;
     }
 
-    for (const route of WRONG_GATEWAY_MONSTER_ROUTES) {
-      const monster = this.gatewayMonsters.create(route.x, route.y, "wrong-gateway-virus-beetle") as Phaser.Physics.Arcade.Sprite;
+    const textureKey = this.textures.exists(CHAPTER_MINION_TEXTURE_KEYS[chapter.id])
+      ? CHAPTER_MINION_TEXTURE_KEYS[chapter.id]
+      : "wrong-gateway-virus-beetle";
+    for (const route of getChapterEnemyRoutes(chapter.id, chapter.index)) {
+      const monster = this.gatewayMonsters.create(route.x, route.y, textureKey) as Phaser.Physics.Arcade.Sprite;
       monster.setDepth(18);
-      monster.setScale(0.82);
       monster.setAlpha(0.96);
+      monster.setDisplaySize(route.displayWidth, route.displayHeight);
       monster.setData("minX", route.minX);
       monster.setData("maxX", route.maxX);
       monster.setData("baseY", route.y);
       monster.setData("phase", Phaser.Math.FloatBetween(0, Math.PI * 2));
+      monster.setData("hp", route.hp);
+      monster.setData("maxHp", route.hp);
+      monster.setData("contactDamage", route.contactDamage);
+      monster.setData("baseScaleX", monster.scaleX);
+      monster.setData("baseScaleY", monster.scaleY);
       monster.setVelocityX(route.speed);
-      monster.setMaxVelocity(90, 620);
+      monster.setMaxVelocity(Math.max(96, Math.abs(route.speed) + 36), 620);
       monster.setBounce(0, 0);
       monster.setCollideWorldBounds(false);
       monster.setFlipX(route.speed < 0);
 
       const body = monster.body as Phaser.Physics.Arcade.Body;
-      body.setSize(34, 16);
-      body.setOffset(9, 10);
+      body.setSize(62, 36, true);
     }
   }
 
@@ -1506,6 +1746,16 @@ export class GameplayScene extends Phaser.Scene {
           this.handleGatewayMonsterHit(monster as Phaser.GameObjects.GameObject);
         }),
       );
+      if (this.playerProjectiles) {
+        this.colliders.push(
+          this.physics.add.overlap(this.playerProjectiles, this.gatewayMonsters, (projectile, monster) => {
+            this.handlePlayerProjectileMonsterHit(
+              projectile as Phaser.GameObjects.GameObject,
+              monster as Phaser.GameObjects.GameObject,
+            );
+          }),
+        );
+      }
     }
     if (this.gatewayDigitBlocks) {
       this.colliders.push(
@@ -1580,10 +1830,23 @@ export class GameplayScene extends Phaser.Scene {
 
   private handleCollectiblePickup(item: Phaser.GameObjects.GameObject): void {
     this.playWorldSfx("collect", 0.72, item as Phaser.Physics.Arcade.Sprite);
+    const pickupKind = ((item.getData("pickupKind") as CollectiblePickupKind | undefined) ?? "chapter") as CollectiblePickupKind;
     item.destroy();
+
+    if (pickupKind === "health") {
+      this.controller.heal(HEALTH_PICKUP_AMOUNT);
+      this.controller.note("完整性补丁已吸收，恢复 1 颗爱心。");
+      this.emitState();
+      return;
+    }
+
+    if (pickupKind === "throw-skill-buff") {
+      this.unlockPlatformThrowAttack();
+      this.emitState();
+      return;
+    }
+
     this.controller.collectChapterItem();
-    this.controller.heal(10);
-    this.maybeUnlockPlatformThrowAttack();
     this.emitState();
   }
 
@@ -1596,19 +1859,14 @@ export class GameplayScene extends Phaser.Scene {
     this.damagePlayer(9);
   }
 
-  private maybeUnlockPlatformThrowAttack(): void {
-    const chapter = this.controller.currentChapter();
-    if (chapter.index < PLATFORM_THROW_CHAPTER_START_INDEX || this.hasPlatformThrowAttack()) {
-      return;
-    }
-
-    const collected = this.controller.state.chapterCollectibles[chapter.id] ?? 0;
-    if (collected <= 0) {
+  private unlockPlatformThrowAttack(): void {
+    if (this.hasPlatformThrowAttack()) {
+      this.controller.note("投掷模块已校准：按 F 持续攻击 Boss。");
       return;
     }
 
     this.controller.state.flags[PLATFORM_THROW_UNLOCKED_FLAG] = true;
-    this.controller.note("技能模块接入：按 J 投掷数据刃。", true);
+    this.controller.note("技能模块接入：按 F 投掷数据刃。", true);
   }
 
   private hasPlatformThrowAttack(): boolean {
@@ -1620,6 +1878,52 @@ export class GameplayScene extends Phaser.Scene {
     const damage = (projectile.getData("damage") as number | undefined) ?? PLAYER_THROW_DAMAGE;
     projectile.destroy();
     this.damageBoss(damage);
+  }
+
+  private handlePlayerProjectileMonsterHit(
+    projectileObject: Phaser.GameObjects.GameObject,
+    monsterObject: Phaser.GameObjects.GameObject,
+  ): void {
+    const projectile = projectileObject as Phaser.Physics.Arcade.Sprite;
+    const monster = monsterObject as Phaser.Physics.Arcade.Sprite;
+    if (!projectile.active || !monster.active || monster.getData("stomped") === true) {
+      return;
+    }
+
+    const direction = (projectile.getData("direction") as number | undefined) ?? (projectile.x < monster.x ? 1 : -1);
+    projectile.destroy();
+
+    const hp = Math.max(0, ((monster.getData("hp") as number | undefined) ?? 1) - PLAYER_THROW_MONSTER_DAMAGE);
+    monster.setData("hp", hp);
+    this.playWorldSfx("monster-hit", 0.8, monster);
+
+    if (hp > 0) {
+      monster.setTintFill(0xffffff);
+      monster.setVelocityX(direction * 110);
+      monster.setVelocityY(-80);
+      this.time.delayedCall(80, () => monster.active && monster.clearTint());
+      return;
+    }
+
+    const body = monster.body as Phaser.Physics.Arcade.Body | undefined;
+    monster.setData("stomped", true);
+    if (body) {
+      body.enable = false;
+    }
+    monster.setVelocity(0, 0);
+    this.spawnGatewayStompBurst(monster.x, monster.y);
+    this.controller.note("数据刃击碎了病毒小怪。", true);
+    this.emitState();
+    this.tweens.add({
+      targets: monster,
+      alpha: 0,
+      scaleX: monster.scaleX * 1.22,
+      scaleY: monster.scaleY * 0.18,
+      y: monster.y + 10,
+      duration: 150,
+      ease: "Quad.easeIn",
+      onComplete: () => monster.destroy(),
+    });
   }
 
   private updateCursorHunter(time: number): void {
@@ -1758,7 +2062,7 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private updateGatewayMonsters(time: number): void {
-    if (this.controller.currentChapter().id !== "wrong-gateway" || !this.gatewayMonsters) {
+    if (!this.gatewayMonsters) {
       return;
     }
 
@@ -1772,6 +2076,8 @@ export class GameplayScene extends Phaser.Scene {
       const minX = monster.getData("minX") as number;
       const maxX = monster.getData("maxX") as number;
       const phase = monster.getData("phase") as number;
+      const baseScaleX = (monster.getData("baseScaleX") as number | undefined) ?? monster.scaleX;
+      const baseScaleY = (monster.getData("baseScaleY") as number | undefined) ?? monster.scaleY;
       let velocityX = body.velocity.x;
       if (velocityX === 0) {
         velocityX = monster.flipX ? -52 : 52;
@@ -1788,7 +2094,10 @@ export class GameplayScene extends Phaser.Scene {
       monster.setVelocityX(velocityX);
       monster.setFlipX(velocityX < 0);
       monster.setRotation(Math.sin(time / 170 + phase) * 0.06);
-      monster.setScale(0.82 + Math.sin(time / 130 + phase) * 0.025, 0.82 + Math.cos(time / 150 + phase) * 0.04);
+      monster.setScale(
+        baseScaleX * (1 + Math.sin(time / 130 + phase) * 0.035),
+        baseScaleY * (1 + Math.cos(time / 150 + phase) * 0.05),
+      );
       return true;
     });
   }
@@ -1819,7 +2128,7 @@ export class GameplayScene extends Phaser.Scene {
 
     const pushX = this.player.x < monster.x ? -170 : 170;
     this.player.setVelocity(pushX, -150);
-    this.damagePlayer(7);
+    this.damagePlayer((monster.getData("contactDamage") as number | undefined) ?? 20);
   }
 
   private tryStompGatewayMonster(monster: Phaser.Physics.Arcade.Sprite): boolean {
@@ -2238,8 +2547,8 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.j)) {
-      if (this.controller.currentChapter().index >= PLATFORM_THROW_CHAPTER_START_INDEX) {
+    if (Phaser.Input.Keyboard.JustDown(this.keys.f)) {
+      if (this.hasPlatformThrowAttack()) {
         this.usePlatformThrow(time);
       } else {
         this.useCoil();
@@ -2843,6 +3152,7 @@ export class GameplayScene extends Phaser.Scene {
     }
     this.player.setAlpha(time < this.stealthUntil ? 0.46 : 1);
     this.updatePlayerAnimation();
+    this.updatePlayerMorphPetVisual(time);
     if (time < this.pingUntil && this.exitSprite) {
       this.exitSprite.setTint(0xffffff);
     } else if (this.exitSprite) {
@@ -2859,6 +3169,34 @@ export class GameplayScene extends Phaser.Scene {
       return;
     }
 
+    const animation = this.getCurrentPetAnimationName();
+    const key = getPetAnimationKey(this.playerPetTextureKey, animation);
+    if (this.player.anims.currentAnim?.key !== key) {
+      this.player.play(key, true);
+    }
+  }
+
+  private updatePlayerMorphPetVisual(time: number): void {
+    if (!this.player || !this.playerMorphPetSprite || !this.playerMorphPetTextureKey || !this.playerMorphConfig) {
+      return;
+    }
+
+    const animation = this.getCurrentPetAnimationName();
+    const key = getPetAnimationKey(this.playerMorphPetTextureKey, animation);
+    if (this.playerMorphPetSprite.anims.currentAnim?.key !== key) {
+      this.playerMorphPetSprite.play(key, true);
+    }
+
+    this.playerMorphPetSprite.setPosition(this.player.x, this.player.y + 4 + Math.sin(time / 180) * 2);
+    this.playerMorphPetSprite.setFlipX(this.player.flipX);
+    this.playerMorphPetSprite.setAlpha((time < this.stealthUntil ? 0.38 : 1) * this.playerMorphConfig.petAlpha);
+  }
+
+  private getCurrentPetAnimationName(): PetAnimationName {
+    if (!this.player) {
+      return "idle";
+    }
+
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     const isClimbingLadder = Boolean(this.player.getData("isClimbingLadder"));
     const isWallClinging = Boolean(this.player.getData("isWallClinging"));
@@ -2872,10 +3210,7 @@ export class GameplayScene extends Phaser.Scene {
       animation = "run";
     }
 
-    const key = getPetAnimationKey(this.playerPetTextureKey, animation);
-    if (this.player.anims.currentAnim?.key !== key) {
-      this.player.play(key, true);
-    }
+    return animation;
   }
 
   private updateExitPulse(time: number): void {

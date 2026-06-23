@@ -12,6 +12,7 @@ import { themeTileKeys } from "../assets/manifest";
 import { GameController } from "../simulation/GameController";
 import type { BossDef } from "../types";
 import type { ChapterId } from "../types";
+import { getCodeLifeChapterConfig, isCodeLifeChapterId } from "./codeLife/CodeLifeChapterConfig";
 import { createGameKeys, type GameKeyName } from "./inputConfig";
 import {
   getPetAnimationKey,
@@ -30,6 +31,7 @@ import {
   JUMP_SPEED,
   PLAYER_SPEED,
 } from "./worldConfig";
+import { isStompAttack } from "./stompAttack";
 
 type CursorJumpState = "watching" | "aiming" | "jumping" | "recovering";
 type WorldSfxId =
@@ -75,6 +77,24 @@ interface WorldSfxPatch {
   tones: readonly WorldSfxTone[];
 }
 
+type ElectromagneticTrapOrientation = "horizontal" | "vertical";
+
+interface ElectromagneticTrapLayout {
+  width: number;
+  height: number;
+  orientation: ElectromagneticTrapOrientation;
+}
+
+interface ElectromagneticTrapInstance {
+  collider: Phaser.Physics.Arcade.Sprite;
+  visual: Phaser.GameObjects.Sprite;
+}
+
+interface WrongGatewayShredderGap {
+  x: number;
+  width: number;
+}
+
 const GATEWAY_DIGIT_VALUES = [1, 9, 2, 1, 6, 8, 0, 0, 0, 0, 0, 1] as const;
 const GATEWAY_SEPARATOR_AFTER = new Set([2, 5, 8]);
 const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
@@ -99,6 +119,13 @@ const WRONG_GATEWAY_MONSTER_ROUTES: readonly GatewayMonsterRoute[] = [
   { x: 2395, y: 708, minX: 2248, maxX: 2528, speed: 60 },
   { x: 1825, y: 950, minX: 1584, maxX: 2022, speed: -58 },
 ] as const;
+const WRONG_GATEWAY_SHREDDER_GAPS: readonly WrongGatewayShredderGap[] = [
+  { x: 745, width: 130 },
+  { x: 1480, width: 140 },
+  { x: 2135, width: 130 },
+] as const;
+const WRONG_GATEWAY_SHREDDER_TOP = 972;
+const WRONG_GATEWAY_SHREDDER_HEIGHT = 72;
 const WORLD_SFX_COOLDOWNS: Record<WorldSfxId, number> = {
   jump: 80,
   collect: 90,
@@ -194,6 +221,10 @@ const PLAYER_THROW_COOLDOWN_MS = 420;
 const PLAYER_THROW_SPEED = 600;
 const PLAYER_THROW_DAMAGE = 22;
 const PLAYER_THROW_TTL_MS = 1200;
+const PLAYER_STOMP_BOUNCE_SPEED = JUMP_SPEED * 0.72;
+const ELECTROMAGNETIC_TRAP_TEXTURE_KEY = "electromagnetic-trap-beam";
+const ELECTROMAGNETIC_TRAP_ANIMATION_KEY = "electromagnetic-trap-beam-flow";
+const WRONG_GATEWAY_SHREDDER_ANIMATION_KEY = "wrong-gateway-shredder-churn";
 const VERTICAL_SCROLL_CHAPTER_IDS = new Set<ChapterId>(["code-rebirth", "trash-mountain"]);
 const CODE_REBIRTH_BOTTOM_PLATFORM_DRAW_Y = 2312;
 const CODE_REBIRTH_BOTTOM_PLATFORM_HEIGHT = 300;
@@ -254,6 +285,7 @@ export class GameplayScene extends Phaser.Scene {
   private gatewayGuideText?: Phaser.GameObjects.Text;
   private gatewayGuideArrow?: Phaser.GameObjects.Triangle;
   private gatewayGuideBeam?: Phaser.GameObjects.Rectangle;
+  private gatewayIpMissingPrompt?: Phaser.GameObjects.Container;
   private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private worldAudioContext?: AudioContext;
   private readonly worldAudioCooldownUntil = new Map<WorldSfxId, number>();
@@ -449,16 +481,21 @@ export class GameplayScene extends Phaser.Scene {
     } else if (chapter.id === "trash-mountain") {
       this.drawTrashMountainVerticalBackdrop(tileKey);
     } else {
-      this.add
-        .tileSprite(
-          this.currentWorldWidth / 2,
-          this.currentWorldHeight / 2,
-          this.currentWorldWidth,
-          this.currentWorldHeight,
-          tileKey,
-        )
-        .setAlpha(0.12);
-      this.drawBackdropGrid(chapter.palette.accent);
+      const codeLifeConfig = isCodeLifeChapterId(chapter.id) ? getCodeLifeChapterConfig(chapter.id) : undefined;
+      if (codeLifeConfig?.backgroundKey) {
+        this.drawCodeLifeConfiguredBackdrop(codeLifeConfig.backgroundKey, tileKey);
+      } else {
+        this.add
+          .tileSprite(
+            this.currentWorldWidth / 2,
+            this.currentWorldHeight / 2,
+            this.currentWorldWidth,
+            this.currentWorldHeight,
+            tileKey,
+          )
+          .setAlpha(0.12);
+        this.drawBackdropGrid(chapter.palette.accent);
+      }
     }
     this.drawChapterTitle();
 
@@ -524,6 +561,7 @@ export class GameplayScene extends Phaser.Scene {
     this.gatewayGuideText = undefined;
     this.gatewayGuideArrow = undefined;
     this.gatewayGuideBeam = undefined;
+    this.gatewayIpMissingPrompt = undefined;
     this.bossHp = 0;
     this.bossMaxHp = 0;
     this.nextBossAttackAt = 0;
@@ -538,6 +576,20 @@ export class GameplayScene extends Phaser.Scene {
     for (let y = 80; y <= this.currentWorldHeight; y += 120) {
       this.add.rectangle(this.currentWorldWidth / 2, y, this.currentWorldWidth, 2, color, 0.08).setOrigin(0.5);
     }
+  }
+
+  private drawCodeLifeConfiguredBackdrop(backgroundKey: string, tileKey: string): void {
+    this.add
+      .image(0, 0, backgroundKey)
+      .setOrigin(0)
+      .setDisplaySize(this.currentWorldWidth, this.currentWorldHeight)
+      .setDepth(-24);
+
+    this.add
+      .tileSprite(0, 0, this.currentWorldWidth, this.currentWorldHeight, tileKey)
+      .setOrigin(0)
+      .setAlpha(0.035)
+      .setDepth(-23);
   }
 
   private drawCursorHuntBackdrop(): void {
@@ -1237,25 +1289,24 @@ export class GameplayScene extends Phaser.Scene {
 
   private createHazardsForChapter(): void {
     const chapter = this.controller.currentChapter();
+    if (chapter.id === "wrong-gateway") {
+      this.createWrongGatewayShredders();
+    }
+
     const hazardCount = getHazardCount(chapter.id, chapter.index);
     for (let i = 0; i < hazardCount; i += 1) {
       const { x, y } = getHazardPosition(i, chapter.id);
-      const hazard = this.hazards!.create(x, y, "hazard-scan") as Phaser.Physics.Arcade.Sprite;
-      hazard.setTint(chapter.palette.danger);
-      const hazardWidth = chapter.id === "cursor-hunt" ? 140 : VERTICAL_SCROLL_CHAPTER_IDS.has(chapter.id) ? 168 : 96;
-      const hazardHeight = chapter.id === "cursor-hunt" ? 18 : VERTICAL_SCROLL_CHAPTER_IDS.has(chapter.id) ? 18 : 14;
-      hazard.setDisplaySize(hazardWidth, hazardHeight);
-      hazard.refreshBody();
-      hazard.setAlpha(chapter.id === "cursor-hunt" ? 0.68 : 0.55);
+      const layout = this.getElectromagneticTrapLayout(i, chapter.id);
+      this.createElectromagneticTrap(x, y, layout, chapter.id === "cursor-hunt" ? 0.86 : 0.92);
 
       if (chapter.id === "cursor-hunt") {
         const trap = this.add
-          .rectangle(x, y - 34, 112, 52, 0xff2f50, 0.08)
-          .setStrokeStyle(2, 0xff4f6d, 0.45)
+          .rectangle(x, y - 34, 112, 52, 0x2fe8ff, 0.06)
+          .setStrokeStyle(2, 0x72f6ff, 0.4)
           .setDepth(7);
         this.tweens.add({
           targets: trap,
-          alpha: { from: 0.04, to: 0.22 },
+          alpha: { from: 0.06, to: 0.16 },
           yoyo: true,
           repeat: -1,
           duration: 520 + i * 120,
@@ -1276,6 +1327,66 @@ export class GameplayScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  private createWrongGatewayShredders(): void {
+    for (const gap of WRONG_GATEWAY_SHREDDER_GAPS) {
+      const y = WRONG_GATEWAY_SHREDDER_TOP + WRONG_GATEWAY_SHREDDER_HEIGHT / 2;
+      const collider = this.hazards!.create(gap.x, y, "hazard-scan") as Phaser.Physics.Arcade.Sprite;
+      collider.setData("instantKill", true);
+      collider.setDisplaySize(gap.width, WRONG_GATEWAY_SHREDDER_HEIGHT);
+      collider.setVisible(false);
+      collider.refreshBody();
+
+      const visualWidth = gap.width + 54;
+      const visualHeight = WRONG_GATEWAY_SHREDDER_HEIGHT + 6;
+      this.add
+        .sprite(gap.x, WRONG_GATEWAY_SHREDDER_TOP + visualHeight / 2 - 2, "wrong-gateway-shredder")
+        .setDisplaySize(visualWidth, visualHeight)
+        .setDepth(6.35)
+        .play(WRONG_GATEWAY_SHREDDER_ANIMATION_KEY);
+    }
+  }
+
+  private getElectromagneticTrapLayout(index: number, chapterId: ChapterId): ElectromagneticTrapLayout {
+    const horizontalWidth = chapterId === "cursor-hunt" ? 146 : VERTICAL_SCROLL_CHAPTER_IDS.has(chapterId) ? 176 : 112;
+    const thickness = chapterId === "cursor-hunt" ? 22 : VERTICAL_SCROLL_CHAPTER_IDS.has(chapterId) ? 20 : 18;
+    const verticalHeight = chapterId === "cursor-hunt" ? 116 : VERTICAL_SCROLL_CHAPTER_IDS.has(chapterId) ? 152 : 124;
+    const shouldStandVertical =
+      chapterId === "cursor-hunt"
+        ? index === 1 || index === 3
+        : VERTICAL_SCROLL_CHAPTER_IDS.has(chapterId)
+          ? index % 2 === 1
+          : index % 3 === 2;
+
+    return shouldStandVertical
+      ? { width: thickness, height: verticalHeight, orientation: "vertical" }
+      : { width: horizontalWidth, height: thickness, orientation: "horizontal" };
+  }
+
+  private createElectromagneticTrap(
+    x: number,
+    y: number,
+    layout: ElectromagneticTrapLayout,
+    alpha = 0.92,
+  ): ElectromagneticTrapInstance {
+    const collider = this.hazards!.create(x, y, "hazard-scan") as Phaser.Physics.Arcade.Sprite;
+    collider.setDisplaySize(layout.width, layout.height);
+    collider.setVisible(false);
+    collider.refreshBody();
+
+    const visual = this.add.sprite(x, y, ELECTROMAGNETIC_TRAP_TEXTURE_KEY).setDepth(9).setAlpha(alpha);
+    visual.play(ELECTROMAGNETIC_TRAP_ANIMATION_KEY);
+    if (layout.orientation === "vertical") {
+      visual.setDisplaySize(layout.height, layout.width);
+      visual.setAngle(90);
+    } else {
+      visual.setDisplaySize(layout.width, layout.height);
+    }
+
+    collider.setData("visual", visual);
+    visual.setData("collider", collider);
+    return { collider, visual };
   }
 
   private createGatewayMonsters(): void {
@@ -1369,8 +1480,8 @@ export class GameplayScene extends Phaser.Scene {
       }),
     );
     this.colliders.push(
-      this.physics.add.overlap(this.player, this.hazards, () => {
-        this.damagePlayer(9);
+      this.physics.add.overlap(this.player, this.hazards, (_player, hazard) => {
+        this.handleHazardPlayerOverlap(hazard as Phaser.GameObjects.GameObject);
       }),
     );
     this.colliders.push(
@@ -1434,6 +1545,15 @@ export class GameplayScene extends Phaser.Scene {
     this.controller.heal(10);
     this.maybeUnlockPlatformThrowAttack();
     this.emitState();
+  }
+
+  private handleHazardPlayerOverlap(hazardObject: Phaser.GameObjects.GameObject): void {
+    if (hazardObject.getData("instantKill") === true) {
+      this.killPlayerInstantly(hazardObject as Phaser.Physics.Arcade.Sprite);
+      return;
+    }
+
+    this.damagePlayer(9);
   }
 
   private maybeUnlockPlatformThrowAttack(): void {
@@ -1604,7 +1724,7 @@ export class GameplayScene extends Phaser.Scene {
 
     this.gatewayMonsters.children.iterate((child) => {
       const monster = child as Phaser.Physics.Arcade.Sprite;
-      if (!monster.active) {
+      if (!monster.active || monster.getData("stomped") === true) {
         return false;
       }
 
@@ -1634,10 +1754,19 @@ export class GameplayScene extends Phaser.Scene {
   }
 
   private handleGatewayMonsterHit(monsterObject: Phaser.GameObjects.GameObject): void {
-    if (!this.player || this.gmFeatures.invincible) {
+    if (!this.player) {
       return;
     }
     const monster = monsterObject as Phaser.Physics.Arcade.Sprite;
+    if (!monster.active || monster.getData("stomped") === true) {
+      return;
+    }
+    if (this.tryStompGatewayMonster(monster)) {
+      return;
+    }
+    if (this.gmFeatures.invincible) {
+      return;
+    }
     const lastContactAt = monster.getData("lastContactAt") as number | undefined;
     if (lastContactAt && this.time.now - lastContactAt < 650) {
       return;
@@ -1651,6 +1780,155 @@ export class GameplayScene extends Phaser.Scene {
     const pushX = this.player.x < monster.x ? -170 : 170;
     this.player.setVelocity(pushX, -150);
     this.damagePlayer(7);
+  }
+
+  private tryStompGatewayMonster(monster: Phaser.Physics.Arcade.Sprite): boolean {
+    if (!this.player || !monster.active) {
+      return false;
+    }
+
+    const playerBody = this.player.body as Phaser.Physics.Arcade.Body | undefined;
+    const monsterBody = monster.body as Phaser.Physics.Arcade.Body | undefined;
+    if (!playerBody || !monsterBody || !playerBody.enable || !monsterBody.enable) {
+      return false;
+    }
+
+    const stomped = isStompAttack({
+      attacker: {
+        left: playerBody.x,
+        right: playerBody.x + playerBody.width,
+        top: playerBody.y,
+        bottom: playerBody.y + playerBody.height,
+      },
+      target: {
+        left: monsterBody.x,
+        right: monsterBody.x + monsterBody.width,
+        top: monsterBody.y,
+        bottom: monsterBody.y + monsterBody.height,
+      },
+      attackerPreviousBottom: playerBody.prev.y + playerBody.height,
+      attackerVelocityY: playerBody.velocity.y,
+    });
+
+    if (!stomped) {
+      return false;
+    }
+
+    monster.setData("stomped", true);
+    monsterBody.enable = false;
+    monster.setVelocity(0, 0);
+    this.player.setVelocityY(-PLAYER_STOMP_BOUNCE_SPEED);
+    this.limitedJumpCount = 1;
+    this.playWorldSfx("monster-hit", 1, monster);
+    this.spawnGatewayStompBurst(monster.x, monster.y);
+    this.cameras.main.shake(90, 0.004);
+    this.controller.note("\u4ece\u4e0a\u65b9\u8e29\u788e\u4e86\u4f4e\u7ea7\u75c5\u6bd2\u5c0f\u602a\u3002", true);
+    this.emitState();
+
+    this.tweens.add({
+      targets: monster,
+      alpha: 0,
+      scaleX: monster.scaleX * 1.2,
+      scaleY: 0.12,
+      y: monster.y + 12,
+      duration: 150,
+      ease: "Quad.easeIn",
+      onComplete: () => monster.destroy(),
+    });
+    return true;
+  }
+
+  private spawnGatewayStompBurst(x: number, y: number): void {
+    const colors = [0xfff1a6, 0xff365f, 0xffd76a, 0xffffff];
+    for (let index = 0; index < 12; index += 1) {
+      const shard = this.add.rectangle(
+        x,
+        y,
+        Phaser.Math.Between(3, 7),
+        Phaser.Math.Between(3, 8),
+        colors[index % colors.length],
+        0.95,
+      );
+      shard.setDepth(22);
+      this.tweens.add({
+        targets: shard,
+        x: x + Phaser.Math.Between(-46, 46),
+        y: y + Phaser.Math.Between(-34, 18),
+        alpha: 0,
+        angle: Phaser.Math.Between(-120, 120),
+        duration: Phaser.Math.Between(180, 320),
+        ease: "Quad.easeOut",
+        onComplete: () => shard.destroy(),
+      });
+    }
+  }
+
+  private showGatewayIpMissingPrompt(): void {
+    this.gatewayIpMissingPrompt?.destroy();
+
+    this.cameras.main.shake(180, 0.009);
+
+    const prompt = this.add.container(480, 270).setScrollFactor(0).setDepth(120);
+    const flash = this.add.rectangle(0, 0, 960, 540, 0xff123c, 0.16);
+    const panel = this.add.image(0, 0, "wrong-gateway-ip-warning-panel").setDisplaySize(760, 430);
+    const title = this.add
+      .text(0, -2, "IP地址不存在", {
+        color: "#fff4d0",
+        fontFamily: "Microsoft YaHei UI, sans-serif",
+        fontSize: "46px",
+        fontStyle: "bold",
+        stroke: "#210308",
+        strokeThickness: 8,
+      })
+      .setOrigin(0.5);
+    title.setShadow(0, 0, "#ff365f", 18, true, true);
+    const scanLine = this.add.rectangle(0, 82, 540, 5, 0xff365f, 0.82);
+
+    prompt.add([flash, panel, title, scanLine]);
+    prompt.setAlpha(0);
+    prompt.setScale(0.72);
+    this.gatewayIpMissingPrompt = prompt;
+
+    this.tweens.add({
+      targets: flash,
+      alpha: { from: 0.06, to: 0.22 },
+      yoyo: true,
+      repeat: 3,
+      duration: 120,
+      ease: "Sine.easeInOut",
+    });
+    this.tweens.add({
+      targets: scanLine,
+      alpha: { from: 0.32, to: 1 },
+      scaleX: { from: 0.72, to: 1 },
+      yoyo: true,
+      repeat: 5,
+      duration: 110,
+      ease: "Sine.easeInOut",
+    });
+    this.tweens.add({
+      targets: prompt,
+      alpha: 1,
+      scale: 1,
+      duration: 140,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: prompt,
+          alpha: 0,
+          scale: 1.04,
+          delay: 760,
+          duration: 240,
+          ease: "Sine.easeIn",
+          onComplete: () => {
+            prompt.destroy();
+            if (this.gatewayIpMissingPrompt === prompt) {
+              this.gatewayIpMissingPrompt = undefined;
+            }
+          },
+        });
+      },
+    });
   }
 
   private updateGatewayGuide(_time: number): void {
@@ -2136,12 +2414,16 @@ export class GameplayScene extends Phaser.Scene {
         120,
         this.currentWorldHeight - 80,
       );
-      const scan = this.hazards!.create(this.bossSprite.x - 60, y, "hazard-scan") as Phaser.Physics.Arcade.Sprite;
-      scan.setTint(boss.color);
-      scan.setDisplaySize(240, 14);
-      scan.refreshBody();
-      scan.setAlpha(0.75);
-      this.time.delayedCall(1450, () => scan.destroy());
+      const scan = this.createElectromagneticTrap(
+        this.bossSprite.x - 60,
+        y,
+        { width: 240, height: 20, orientation: "horizontal" },
+        0.96,
+      );
+      this.time.delayedCall(1450, () => {
+        scan.visual.destroy();
+        scan.collider.destroy();
+      });
     } else {
       const minion = this.projectiles.create(this.bossSprite.x - 80, this.bossSprite.y + 40, "boss-bullet") as Phaser.Physics.Arcade.Sprite;
       minion.setTint(0xffffff);
@@ -2225,6 +2507,30 @@ export class GameplayScene extends Phaser.Scene {
       this.player.setVelocity(0, 0);
       this.limitedJumpCount = 0;
     }
+    this.emitState();
+  }
+
+  private killPlayerInstantly(source?: Readonly<{ x: number; y: number }>): void {
+    if (!this.player || this.gmFeatures.invincible) {
+      return;
+    }
+
+    this.player.setData("lastDamageAt", this.time.now);
+    this.playWorldSfx("hurt", 1.2, source ?? this.player);
+    this.controller.state.integrity = 0;
+    const respawned = this.controller.damage(Number.MAX_SAFE_INTEGER);
+    this.player.setTintFill(0xfff1a6);
+    this.time.delayedCall(90, () => this.player?.clearTint());
+    this.cameras.main.shake(180, 0.012);
+
+    if (respawned) {
+      const chapter = this.controller.currentChapter();
+      const respawnPosition = this.getPlayerStartPosition(chapter.id);
+      this.player.setPosition(respawnPosition.x, respawnPosition.y);
+      this.player.setVelocity(0, 0);
+      this.limitedJumpCount = 0;
+    }
+
     this.emitState();
   }
 

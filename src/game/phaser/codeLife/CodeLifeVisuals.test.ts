@@ -11,7 +11,7 @@ describe("CodeLife visual texture routing", () => {
     expect(getCodeLifeHazardTextureKey("printer-roller")).toBe("pd-hazard-roller");
     expect(getCodeLifeHazardTextureKey("audio-feedback")).toBe("pd-hazard-audio");
     expect(getCodeLifeHazardTextureKey("firmware-flash")).toBe("pd-hazard-firmware");
-    expect(getCodeLifeHazardTextureKey("delete-scan")).toBe("pd-hazard-scan");
+    expect(getCodeLifeHazardTextureKey("delete-scan")).toBe("electromagnetic-trap-beam");
   });
 
   it("routes late bosses to readable silhouettes", () => {

@@ -98,6 +98,7 @@ function createRefs(): DomUiRefs {
     startingSkill: createFakeElement(),
     chapter: createFakeElement(),
     objective: createFakeElement(),
+    integrityHearts: createFakeElement(),
     integrityBar: createFakeElement(),
     integrityText: createFakeElement(),
     massBar: createFakeElement(),
@@ -177,6 +178,14 @@ describe("renderHudAndEnding late platform mode", () => {
 
     expect(refs.hud.dataset.mode).toBe("standard");
     expect(refs.hud.dataset.hudMode).toBe("standard");
+    expect(refs.integrityHearts.dataset.value).toBe("5/5");
+    expect(asFakeElement(refs.integrityHearts).children.map((child) => child.dataset.filled)).toEqual([
+      "true",
+      "true",
+      "true",
+      "true",
+      "true",
+    ]);
     expect(refs.boss.textContent).toContain("Boss");
     expect(asFakeElement(refs.abilities).children.map((child) => child.textContent)).toEqual([
       "攀附",

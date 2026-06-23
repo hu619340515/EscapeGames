@@ -123,6 +123,17 @@ describe("full flow smoke", () => {
     expect(controller.state.codeLifeMass).toBe(1);
   });
 
+  it("subtracts exactly one visible heart per damage event", () => {
+    const controller = new GameController();
+    controller.startNewRun("test", customization);
+
+    controller.damage(7);
+    expect(controller.state.integrity).toBe(80);
+
+    controller.damage(99);
+    expect(controller.state.integrity).toBe(60);
+  });
+
   it("carries realtime CodeLife boss HUD snapshots through payload and clears them on chapter entry", () => {
     const controller = new GameController();
     controller.selectChapterForGm("trash-mountain");

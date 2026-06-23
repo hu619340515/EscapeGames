@@ -16,6 +16,7 @@ export function renderDomUiTemplate(): string {
       <div class="hud__primary">
         <div class="hud__chapter" data-ref="chapter"></div>
         <div class="hud__objective" data-ref="objective"></div>
+        <div class="life-hearts" data-ref="integrityHearts" aria-label="生命值"></div>
         <div class="integrity">
           <div class="integrity__bar" data-ref="integrityBar"></div>
         </div>

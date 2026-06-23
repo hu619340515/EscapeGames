@@ -9,6 +9,7 @@ import type { DomUiRefs } from "./refs";
 
 const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
 const PLATFORM_THROW_UNLOCKED_FLAG = "platformThrowUnlocked";
+const INTEGRITY_PER_HEART = 20;
 
 export interface GameStateFlags {
   isStarted: boolean;
@@ -39,6 +40,7 @@ export function renderHudAndEnding(payload: GameUiPayload, refs: DomUiRefs): voi
   refs.hud.dataset.hudMode = hudMode;
   refs.integrityBar.style.width = `${integrityPercent}%`;
   refs.integrityBar.dataset.low = integrityPercent < 35 ? "true" : "false";
+  renderIntegrityHearts(payload, refs);
 
   if (isCodeLifeChapter) {
     renderCodeLifeHud(payload, refs, collectibleCount);
@@ -64,6 +66,22 @@ export function renderHudAndEnding(payload: GameUiPayload, refs: DomUiRefs): voi
     refs.endingTitle.textContent = endings.find((ending) => ending.id === payload.state.selectedEnding)?.title ?? "";
     refs.endingBody.textContent = payload.message;
   }
+}
+
+function renderIntegrityHearts(payload: GameUiPayload, refs: DomUiRefs): void {
+  const maxHearts = Math.max(1, Math.ceil(payload.state.maxIntegrity / INTEGRITY_PER_HEART));
+  const filledHearts = Math.max(0, Math.min(maxHearts, Math.ceil(payload.state.integrity / INTEGRITY_PER_HEART)));
+  const doc = refs.integrityHearts.ownerDocument;
+
+  refs.integrityHearts.dataset.value = `${filledHearts}/${maxHearts}`;
+  refs.integrityHearts.replaceChildren(
+    ...Array.from({ length: maxHearts }, (_, index) => {
+      const heart = doc.createElement("span");
+      heart.dataset.filled = index < filledHearts ? "true" : "false";
+      heart.textContent = "♥";
+      return heart;
+    }),
+  );
 }
 
 function renderCodeLifeHud(payload: GameUiPayload, refs: DomUiRefs, collectibleCount: number): void {

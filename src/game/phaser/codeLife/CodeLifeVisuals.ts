@@ -6,7 +6,7 @@ export function getCodeLifeHazardTextureKey(kind: CodeLifeHazardKind | undefined
   if (kind === "printer-roller") return "pd-hazard-roller";
   if (kind === "audio-feedback") return "pd-hazard-audio";
   if (kind === "firmware-flash") return "pd-hazard-firmware";
-  if (kind === "delete-scan") return "pd-hazard-scan";
+  if (kind === "delete-scan") return "electromagnetic-trap-beam";
   if (kind === "permission-laser") return "pd-hazard-permission";
   if (kind === "firewall-pulse") return "pd-hazard-firewall";
   if (kind === "sync-storm") return "pd-hazard-sync";

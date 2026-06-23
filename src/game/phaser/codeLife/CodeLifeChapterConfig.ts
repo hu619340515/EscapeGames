@@ -363,6 +363,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 3600, height: 2200 },
     spawn: { x: 180, y: 1980 },
     exit: { x: 3340, y: 260, width: 170, height: 190, label: "my-computer spillway", to: "p-drive", gate: "ping-sense" },
+    backgroundKey: "trash-mountain-bg-v2",
     gripSurfaces: [
       { x: 80, y: 2010, width: 640, height: 52, kind: "floor", label: "garbage basin" },
       { x: 460, y: 1680, width: 64, height: 480, kind: "wall", label: "old image cliff" },
@@ -432,6 +433,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 2800, height: 1200 },
     spawn: { x: 150, y: 820 },
     exit: { x: 2580, y: 470, width: 140, height: 210, label: "Leder D drive drop", to: "leder-d-drive" },
+    backgroundKey: "p-drive-bg",
     gripSurfaces: [
       { x: 80, y: 830, width: 520, height: 46, kind: "floor", label: "network location lip" },
       { x: 470, y: 560, width: 500, height: 44, kind: "rail", label: "shared folder rail" },
@@ -477,6 +479,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 4200, height: 1800 },
     spawn: { x: 170, y: 1520 },
     exit: { x: 3900, y: 260, width: 170, height: 210, label: "C wall outer gate", to: "c-wall", gate: "reverse-index" },
+    backgroundKey: "leder-d-drive-bg",
     gripSurfaces: [
       { x: 80, y: 1530, width: 680, height: 52, kind: "floor", label: "downloads swamp bank" },
       { x: 530, y: 1180, width: 620, height: 48, kind: "floor", label: "installer pile" },
@@ -551,6 +554,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 2600, height: 1500 },
     spawn: { x: 160, y: 1260 },
     exit: { x: 2360, y: 330, width: 150, height: 210, label: "opened C drive breach", to: "leder-c-drive", gate: "permission-rend" },
+    backgroundKey: "c-wall-bg",
     gripSurfaces: [
       { x: 80, y: 1260, width: 580, height: 50, kind: "floor", label: "outer permission shelf" },
       { x: 500, y: 900, width: 60, height: 520, kind: "wall", label: "user-habit key column" },
@@ -614,6 +618,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 4400, height: 2000 },
     spawn: { x: 180, y: 1700 },
     exit: { x: 4100, y: 280, width: 180, height: 230, label: "LAN device layer uplink", to: "router-core", gate: "admin-token-core" },
+    backgroundKey: "leder-c-drive-bg",
     gripSurfaces: [
       { x: 70, y: 1710, width: 700, height: 52, kind: "floor", label: "Program Files outer wall base" },
       { x: 560, y: 1320, width: 70, height: 560, kind: "wall", label: "installed app tower" },
@@ -693,6 +698,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 3400, height: 1700 },
     spawn: { x: 160, y: 1340 },
     exit: { x: 3160, y: 270, width: 170, height: 220, label: "device jump node", to: "nas-graveyard", gate: "cross-device-jump" },
+    backgroundKey: "router-core-bg",
     gripSurfaces: [
       { x: 80, y: 1350, width: 600, height: 50, kind: "floor", label: "WAN intake lip" },
       { x: 520, y: 1000, width: 65, height: 500, kind: "wall", label: "port matrix side" },
@@ -756,6 +762,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 3800, height: 1800 },
     spawn: { x: 160, y: 1480 },
     exit: { x: 3540, y: 330, width: 170, height: 210, label: "camera firmware mirror", to: "camera-eye", gate: "version-split" },
+    backgroundKey: "nas-graveyard-bg",
     gripSurfaces: [
       { x: 80, y: 1490, width: 650, height: 50, kind: "floor", label: "backup shelf base" },
       { x: 530, y: 1140, width: 66, height: 520, kind: "wall", label: "snapshot stack" },
@@ -823,6 +830,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 3000, height: 1400 },
     spawn: { x: 150, y: 1120 },
     exit: { x: 2780, y: 360, width: 150, height: 210, label: "printer queue reflection", to: "printer-belly", gate: "vision-takeover" },
+    backgroundKey: "camera-eye-bg",
     gripSurfaces: [
       { x: 70, y: 1130, width: 540, height: 48, kind: "floor", label: "firmware lens base" },
       { x: 460, y: 830, width: 58, height: 430, kind: "wall", label: "sensor bracket" },
@@ -920,6 +928,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 3400, height: 1500 },
     spawn: { x: 160, y: 1180 },
     exit: { x: 3160, y: 430, width: 160, height: 210, label: "speaker pairing queue", to: "speaker-voiceprint", gate: "material-mark" },
+    backgroundKey: "printer-belly-bg",
     gripSurfaces: [
       { x: 70, y: 1190, width: 620, height: 50, kind: "floor", label: "paper tray throat" },
       { x: 520, y: 900, width: 64, height: 430, kind: "wall", label: "feed roller wall" },
@@ -985,6 +994,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 3200, height: 1500 },
     spawn: { x: 160, y: 1160 },
     exit: { x: 2960, y: 350, width: 160, height: 220, label: "dev-board serial port", to: "dev-board", gate: "voiceprint-disguise" },
+    backgroundKey: "speaker-voiceprint-bg",
     gripSurfaces: [
       { x: 80, y: 1170, width: 590, height: 50, kind: "floor", label: "speaker grille base" },
       { x: 520, y: 860, width: 62, height: 450, kind: "wall", label: "woofer cone wall" },
@@ -1050,6 +1060,7 @@ export const codeLifeChapterConfigs = {
     world: { width: 3600, height: 1700 },
     spawn: { x: 160, y: 1340 },
     exit: { x: 3340, y: 290, width: 170, height: 230, label: "ending hardware interface", to: "ending-choice", gate: "hardware-parasite" },
+    backgroundKey: "dev-board-bg",
     gripSurfaces: [
       { x: 80, y: 1350, width: 640, height: 50, kind: "floor", label: "USB serial ledge" },
       { x: 550, y: 1010, width: 64, height: 520, kind: "wall", label: "GPIO pin bank" },

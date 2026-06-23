@@ -13,6 +13,7 @@ export interface DomUiRefs {
   startingSkill: HTMLSelectElement;
   chapter: HTMLElement;
   objective: HTMLElement;
+  integrityHearts: HTMLElement;
   integrityBar: HTMLElement;
   integrityText: HTMLElement;
   massBar: HTMLElement;
@@ -70,6 +71,7 @@ export function collectDomUiRefs(root: HTMLElement): DomUiRefs {
     startingSkill: queryRequired<HTMLSelectElement>(root, '[data-ref="startingSkill"]'),
     chapter: queryRequired<HTMLElement>(root, '[data-ref="chapter"]'),
     objective: queryRequired<HTMLElement>(root, '[data-ref="objective"]'),
+    integrityHearts: queryRequired<HTMLElement>(root, '[data-ref="integrityHearts"]'),
     integrityBar: queryRequired<HTMLElement>(root, '[data-ref="integrityBar"]'),
     integrityText: queryRequired<HTMLElement>(root, '[data-ref="integrityText"]'),
     massBar: queryRequired<HTMLElement>(root, '[data-ref="massBar"]'),

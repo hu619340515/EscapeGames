@@ -15,7 +15,7 @@ export const assetManifest: AssetManifestEntry[] = [
     kind: "ui",
     width: 1672,
     height: 941,
-    replaceWith: "素材/第一章/背景/cursor-hunt-background-large.png",
+    replaceWith: "素材/第一章/背景/cursor-hunt-background-iteration.png",
     description:
       "Chapter 1 runtime background layer. Foreground gameplay platforms and doors are removed so collision can align to the separate foreground layer.",
   },
@@ -41,7 +41,7 @@ export const assetManifest: AssetManifestEntry[] = [
     kind: "ui",
     width: 2880,
     height: 1080,
-    replaceWith: "素材/第二章/背景/wrong-gateway-background-large.png",
+    replaceWith: "素材/第二章/背景/wrong-gateway-background-iteration.png",
     description: "第 2 章横向+纵向扩展服务器关卡底图，约三屏宽两屏高，保留暗青色服务器墙、顶部线缆和下层管线空间。",
   },
   {
@@ -109,6 +109,14 @@ export const assetManifest: AssetManifestEntry[] = [
     description: "第 2 章右侧错误网关门框和红色传送门裁切素材。",
   },
   {
+    key: "wrong-gateway-ip-warning-panel",
+    kind: "ui",
+    width: 1672,
+    height: 941,
+    replaceWith: "素材/第二章/提示/wrong-gateway-ip-warning-panel.png",
+    description: "第 2 章怪物抓到玩家时弹出的 IP 地址不存在警示面板，匹配错误网关暗青机房与黄铜平台边风格。",
+  },
+  {
     key: "player-pet",
     kind: "sprite",
     width: 24,
@@ -149,6 +157,22 @@ export const assetManifest: AssetManifestEntry[] = [
     width: 64,
     height: 10,
     description: "鼠标、杀毒扫描、权限墙和声波等危险带占位图。",
+  },
+  {
+    key: "electromagnetic-trap-beam",
+    kind: "fx",
+    width: 384,
+    height: 64,
+    replaceWith: "src/assets/hazards/electromagnetic-trap-beam-sheet.png",
+    description: "4-frame electromagnetic trap beam spritesheet that can stretch horizontally or rotate for vertical traps.",
+  },
+  {
+    key: "wrong-gateway-shredder",
+    kind: "fx",
+    width: 768,
+    height: 192,
+    replaceWith: "src/assets/hazards/wrong-gateway-shredder-sheet.png",
+    description: "4-frame animated cyber shredder trap spritesheet used to fill wrong-gateway floor gaps as instant-kill hazards.",
   },
   {
     key: "boss-bullet",
@@ -218,7 +242,7 @@ export const assetManifest: AssetManifestEntry[] = [
     kind: "ui",
     width: 1440,
     height: 2560,
-    replaceWith: "素材/第三章/背景/code-rebirth-vertical-background.png",
+    replaceWith: "素材/第三章/背景/code-rebirth-vertical-background-iteration.png",
     description: "Chapter 3 vertical background layer for the code-rebirth route.",
   },
   {
@@ -295,6 +319,15 @@ export const assetManifest: AssetManifestEntry[] = [
       "Chapter 4 vertical background layer with recycle-bin debris, archive cliffs, broken desktop windows, and a dark e-waste shaft.",
   },
   {
+    key: "trash-mountain-bg-v2",
+    kind: "ui",
+    width: 1800,
+    height: 1100,
+    replaceWith: "素材/第四章/背景/trash-mountain-background-iteration.png",
+    description:
+      "Chapter 4 wide generated pixel-art background iteration with a recycle-bin basin, archive cliffs, cache bogs, permission shards, shredder ruins, and a cyan My Computer/LAN exit.",
+  },
+  {
     key: "trash-mountain-fg",
     kind: "ui",
     width: 1440,
@@ -335,6 +368,96 @@ export const assetManifest: AssetManifestEntry[] = [
     height: 176,
     replaceWith: "素材/第四章/敌人/trash-mountain-gateway-warden.png",
     description: "Chapter 4 custom gateway-warden boss sprite, a corrupted monitor core with cyan eye and red malware cracks.",
+  },
+  {
+    key: "p-drive-bg",
+    kind: "ui",
+    width: 2100,
+    height: 900,
+    replaceWith: "素材/第五章/背景/p-drive-background-iteration.png",
+    description:
+      "Chapter 5 generated pixel-art LAN transition background with a floating P: shared-drive bridge, sync streams, mapped-drive pillars, device fragments, and a D-drive drop portal.",
+  },
+  {
+    key: "leder-d-drive-bg",
+    kind: "ui",
+    width: 2100,
+    height: 900,
+    replaceWith: "素材/第六章/背景/leder-d-drive-background-iteration.png",
+    description:
+      "Chapter 6 generated pixel-art D-drive background with downloads swamp, project-folder forest, asset-library cave, duplicate maze, search-index web, and the distant C-drive permission wall.",
+  },
+  {
+    key: "c-wall-bg",
+    kind: "ui",
+    width: 1664,
+    height: 960,
+    replaceWith: "素材/第七章/背景/c-wall-permission-background-iteration.png",
+    description:
+      "Chapter 7 clean pixel-art C-drive permission-wall background with large lock architecture, three decryption slots, restrained red cracks, and no speckled particle noise.",
+  },
+  {
+    key: "leder-c-drive-bg",
+    kind: "ui",
+    width: 2200,
+    height: 1000,
+    replaceWith: "素材/第八章/背景/leder-c-drive-background-iteration.png",
+    description:
+      "Chapter 8 clean pixel-art C-drive system-fortress background with Program Files walls, AppData alleys, service pipes, quarantine cells, task-manager lattice, and admin-token gate.",
+  },
+  {
+    key: "router-core-bg",
+    kind: "ui",
+    width: 2048,
+    height: 1024,
+    replaceWith: "素材/第九章/背景/router-core-background-iteration.png",
+    description:
+      "Chapter 9 clean pixel-art router-core background with WAN intake, port matrix, solid NAT circuit paths, firewall-heart chamber, and device fan-out node.",
+  },
+  {
+    key: "nas-graveyard-bg",
+    kind: "ui",
+    width: 1900,
+    height: 900,
+    replaceWith: "素材/第十章/背景/nas-graveyard-background-iteration.png",
+    description:
+      "Chapter 10 clean pixel-art NAS backup-graveyard background with large drive tombs, old-agent archive pods, version-branch structures, and minimal speckle noise.",
+  },
+  {
+    key: "camera-eye-bg",
+    kind: "ui",
+    width: 1800,
+    height: 840,
+    replaceWith: "素材/第十一章/背景/camera-eye-background-iteration.png",
+    description:
+      "Chapter 11 clean pixel-art camera firmware background with lens hardware, sensor brackets, monitor panes, blind spots, and a distant real-room viewport.",
+  },
+  {
+    key: "printer-belly-bg",
+    kind: "ui",
+    width: 2040,
+    height: 900,
+    replaceWith: "素材/第十二章/背景/printer-belly-background-iteration.png",
+    description:
+      "Chapter 12 clean pixel-art printer-belly background with feed rollers, paper belts, inkhead machinery, queue chutes, and controlled paper highlights.",
+  },
+  {
+    key: "speaker-voiceprint-bg",
+    kind: "ui",
+    width: 1920,
+    height: 900,
+    replaceWith: "素材/第十三章/背景/speaker-voiceprint-background-iteration.png",
+    description:
+      "Chapter 13 clean pixel-art smart-speaker chamber background with woofer cone walls, waveform rails, microphone hardware, and organized audio pulses.",
+  },
+  {
+    key: "dev-board-bg",
+    kind: "ui",
+    width: 1800,
+    height: 850,
+    replaceWith: "素材/第十四章/背景/dev-board-background-iteration.png",
+    description:
+      "Chapter 14 clean pixel-art development-board background with GPIO banks, signal traces, motor control shelves, firmware burn light, and grouped solder pads.",
   },
 ];
 

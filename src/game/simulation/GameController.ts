@@ -26,6 +26,7 @@ const WRONG_GATEWAY_CHANGED_FLAG = "wrongGatewayDigitChanged";
 const MIN_CODE_LIFE_MASS = 0.68;
 const MAX_CODE_LIFE_MASS = 2.85;
 const ABILITY_UNLOCK_CUE_MS = 3200;
+const INTEGRITY_PER_HEART = 20;
 
 const defaultCustomization: PlayerCustomization = {
   body: "round",
@@ -153,11 +154,11 @@ export class GameController {
     this.lastMessage = `已吸收 ${chapter.collectibleLabel}。`;
   }
 
-  damage(amount: number): boolean {
+  damage(_amount: number): boolean {
     if (this.status !== "running") {
       return false;
     }
-    this.state.integrity = Math.max(0, this.state.integrity - amount);
+    this.state.integrity = Math.max(0, this.state.integrity - INTEGRITY_PER_HEART);
     if (this.state.integrity > 0) {
       return false;
     }

@@ -83,6 +83,8 @@ const CODE_REBIRTH_VIRTUAL_GRIP_SPACING = 360;
 const CODE_LIFE_VIRTUAL_GRIP_SPACING = 540;
 const VIRTUAL_GRIP_THICKNESS = 22;
 const VIRTUAL_GRIP_LABEL_PREFIX = "virtual-grip";
+const ELECTROMAGNETIC_TRAP_TEXTURE_KEY = "electromagnetic-trap-beam";
+const ELECTROMAGNETIC_TRAP_ANIMATION_KEY = "electromagnetic-trap-beam-flow";
 
 const FALLBACK_GLYPHS = ["0", "1", "let", "fn", "/tmp", "ERR", "{}", "agent", "null", "grep", "pid", "while"];
 const SENSE_ABILITY_IDS: readonly AbilityId[] = ["ping-sense", "reverse-index", "vision-takeover"];
@@ -231,6 +233,7 @@ export class CodeLifeMode {
   private codeGlyphs: Phaser.GameObjects.Text[] = [];
   private gateLabels: Phaser.GameObjects.Text[] = [];
   private materialMarks: Phaser.Physics.Arcade.Sprite[] = [];
+  private electromagneticTrapVisuals: Phaser.GameObjects.Sprite[] = [];
   private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private fluidBody!: CodeFluidBody;
   private nodes: CodeFluidNode[] = [];
@@ -373,6 +376,10 @@ export class CodeLifeMode {
       label.destroy();
     }
     this.gateLabels = [];
+    for (const visual of this.electromagneticTrapVisuals) {
+      visual.destroy();
+    }
+    this.electromagneticTrapVisuals = [];
     this.materialMarks = [];
     this.clearBossUi();
     this.overlayGraphics?.clear();
@@ -462,19 +469,31 @@ export class CodeLifeMode {
 
   private createHazards(): void {
     for (const hazardLayout of this.layout.hazards) {
+      const isElectromagneticTrap = hazardLayout.kind === "delete-scan";
       const hazard = this.hazards.create(
         hazardLayout.x,
         hazardLayout.y,
         getCodeLifeHazardTextureKey(hazardLayout.kind),
       ) as Phaser.Physics.Arcade.Sprite;
       hazard.setDisplaySize(hazardLayout.width, hazardLayout.height);
-      hazard.setTint(this.getHazardTint(hazardLayout.kind));
+      if (isElectromagneticTrap) {
+        hazard.setVisible(false);
+      } else {
+        hazard.setTint(this.getHazardTint(hazardLayout.kind));
+      }
       hazard.setDepth(13);
-      hazard.setAlpha(0.9);
+      hazard.setAlpha(isElectromagneticTrap ? 0 : 0.9);
       hazard.setData("damage", hazardLayout.damage);
       hazard.setData("kind", hazardLayout.kind ?? "delete-scan");
       hazard.setData("baseWidth", hazardLayout.width);
       hazard.setData("baseHeight", hazardLayout.height);
+      if (isElectromagneticTrap) {
+        const visual = this.scene.add.sprite(hazardLayout.x, hazardLayout.y, ELECTROMAGNETIC_TRAP_TEXTURE_KEY).setDepth(13);
+        visual.play(ELECTROMAGNETIC_TRAP_ANIMATION_KEY);
+        hazard.setData("electromagneticVisual", visual);
+        this.electromagneticTrapVisuals.push(visual);
+        this.syncElectromagneticTrapVisual(hazard, hazardLayout.width, hazardLayout.height, 0.96);
+      }
       if (hazardLayout.angleDeg !== undefined) {
         hazard.setData("angleDeg", hazardLayout.angleDeg);
         hazard.angle = hazardLayout.angleDeg;
@@ -486,6 +505,30 @@ export class CodeLifeMode {
         hazard.setData("blindSpotRects", hazardLayout.blindSpotRects);
       }
       hazard.refreshBody();
+    }
+  }
+
+  private syncElectromagneticTrapVisual(
+    hazard: Phaser.Physics.Arcade.Sprite,
+    width: number,
+    height: number,
+    alpha: number,
+  ): void {
+    const visual = hazard.getData("electromagneticVisual") as Phaser.GameObjects.Sprite | undefined;
+    if (!visual?.active) {
+      return;
+    }
+
+    const isVertical = height > width;
+    visual.setPosition(hazard.x, hazard.y);
+    visual.setAlpha(alpha);
+    visual.setVisible(hazard.active);
+    if (isVertical) {
+      visual.setDisplaySize(height, width);
+      visual.setAngle(90);
+    } else {
+      visual.setDisplaySize(width, height);
+      visual.setAngle(0);
     }
   }
 
@@ -2932,12 +2975,22 @@ export class CodeLifeMode {
         this.emitHazardActivationCue(hazard, kind);
       }
       hazard.setData("lastDamageActive", damageActive);
-      hazard.angle += runtime.angularVelocityDeg;
+      if (kind !== "delete-scan") {
+        hazard.angle += runtime.angularVelocityDeg;
+      }
       hazard.setAlpha(suppressed ? 0.2 : runtime.alpha);
       const baseWidth = (hazard.getData("baseWidth") as number | undefined) ?? hazard.displayWidth;
       const baseHeight = (hazard.getData("baseHeight") as number | undefined) ?? hazard.displayHeight;
       hazard.setDisplaySize(baseWidth * runtime.pulseScale, baseHeight * runtime.pulseScale);
       hazard.refreshBody();
+      if (kind === "delete-scan") {
+        this.syncElectromagneticTrapVisual(
+          hazard,
+          hazard.displayWidth,
+          hazard.displayHeight,
+          suppressed ? 0.28 : runtime.alpha,
+        );
+      }
 
       if (kind === "printer-roller") {
         this.applyPrinterRollerForce(hazard, runtime.conveyorForce, deltaMs);
@@ -3811,7 +3864,7 @@ export class CodeLifeMode {
   private getHazardTint(kind?: CodeLifeHazardKind): number {
     const tintByKind: Partial<Record<CodeLifeHazardKind, number>> = {
       shredder: 0xffd1dc,
-      "delete-scan": 0xff6e91,
+      "delete-scan": 0x72f6ff,
       "cache-sludge": 0xb8ff6a,
       "sync-storm": 0x7affea,
       "permission-laser": 0xb9ccff,

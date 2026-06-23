@@ -1,13 +1,10 @@
 .hud {
   position: absolute;
-  inset: 16px 16px auto 16px;
-  display: grid;
-  grid-template-columns: minmax(260px, 1.2fr) minmax(260px, 1fr) auto;
-  gap: 12px;
+  inset: 16px;
+  display: block;
   pointer-events: none;
 }
 
-.hud__primary,
 .hud__secondary,
 .log-strip,
 .pause-panel__inner,
@@ -18,11 +15,67 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
 }
 
-.hud__primary,
 .hud__secondary {
-  min-height: 88px;
   padding: 10px 12px;
   border-radius: 6px;
+}
+
+.hud__primary {
+  width: fit-content;
+  max-width: calc(100% - 64px);
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hud__secondary,
+.hud__chapter,
+.hud__objective,
+.hud__boss,
+.hud__stats,
+.ability-strip,
+.code-life-meters,
+.code-life-alert,
+.code-life-devour,
+.code-life-status,
+.log-strip,
+.integrity {
+  display: none !important;
+}
+
+.life-hearts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 30px;
+  color: #ff4f78;
+  font-family: "Segoe UI Symbol", "Microsoft YaHei UI", sans-serif;
+  font-size: 25px;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(255, 79, 120, 0.42), 0 2px 0 rgba(10, 0, 6, 0.72);
+}
+
+.life-hearts span {
+  display: inline-block;
+  flex: 0 0 24px;
+  width: 24px;
+  text-align: center;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    filter 140ms ease;
+}
+
+.life-hearts span[data-filled="false"] {
+  opacity: 0.24;
+  filter: grayscale(1);
+  transform: scale(0.88);
 }
 
 .hud__chapter {
@@ -72,10 +125,9 @@
 }
 
 .hud[data-mode="code-life"] {
-  grid-template-columns: minmax(280px, 1.08fr) minmax(320px, 1.2fr) auto;
+  display: block;
 }
 
-.hud[data-mode="code-life"] .hud__primary,
 .hud[data-mode="code-life"] .hud__secondary,
 .hud[data-mode="code-life"] .log-strip {
   border-color: rgba(96, 255, 216, 0.34);
@@ -101,7 +153,7 @@
 }
 
 .hud[data-mode="code-life"] .code-life-only {
-  display: block;
+  display: none;
 }
 
 .code-life-meters {
@@ -211,29 +263,18 @@
 @media (max-width: 860px) {
   .hud,
   .hud[data-mode="code-life"] {
-    inset: 10px 10px auto 10px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    inset: 10px;
   }
 
-  .hud__primary,
-  .hud__secondary {
-    min-width: 0;
+  .life-hearts {
+    gap: 5px;
+    max-width: calc(100% - 54px);
+    font-size: 22px;
   }
 
-  .hud[data-mode="code-life"] .hud__secondary {
-    grid-column: 1 / 3;
-  }
-
-  .hud__chapter,
-  .hud__objective,
-  .hud__boss,
-  .hud__stats {
-    overflow-wrap: anywhere;
-  }
-
-  .ability-strip span {
-    max-width: 100%;
-    overflow-wrap: anywhere;
+  .life-hearts span {
+    flex-basis: 21px;
+    width: 21px;
   }
 }
 
@@ -255,6 +296,9 @@
 }
 
 .hud__pause {
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 42px;
   height: 42px;
   pointer-events: auto;
